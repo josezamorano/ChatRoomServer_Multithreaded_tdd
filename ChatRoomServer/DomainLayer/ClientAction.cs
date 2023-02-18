@@ -6,9 +6,10 @@ using System.Net.Sockets;
 
 namespace ChatRoomServer.DomainLayer
 {
+    public delegate void MessageFromClientDelegate(string messageFromClient);
     public class ClientAction : IClientAction
     {
-        private static SemaphoreSlim _semaphoreSlim1 = new SemaphoreSlim(1, 1);
+        
         //Private Variables
         private List<ClientInfo> _allConnectedClients;
         private List<ServerUser> _allActiveServerUsers;
@@ -24,14 +25,10 @@ namespace ChatRoomServer.DomainLayer
 
         public void SetAllConnectedClients(List<ClientInfo> allConnectedClients)
         {
-            _semaphoreSlim1.Wait();
-            try
-            {
-                _allConnectedClients = allConnectedClients;
-            }
-            finally { _semaphoreSlim1.Release(); }           
+            _allConnectedClients = allConnectedClients;
         }
 
+        private static SemaphoreSlim _semaphoreSlim1 = new SemaphoreSlim(1, 1);
         public List<ClientInfo> GetAllConnectedClients()
         {
             _semaphoreSlim1.Wait();
@@ -42,9 +39,10 @@ namespace ChatRoomServer.DomainLayer
             finally { _semaphoreSlim1.Release(); }
         }
 
+        private static SemaphoreSlim _semaphoreSlim2 = new SemaphoreSlim(1, 1);
         public void AddNewClientConnectionToAllConnectedClients(TcpClient client)
         {
-            _semaphoreSlim1.Wait();
+            _semaphoreSlim2.Wait();
             try
             {
                 if (client.Connected)
@@ -58,85 +56,81 @@ namespace ChatRoomServer.DomainLayer
                     _allConnectedClients.Add(clientInfo);
                 }                
             }
-            finally{ _semaphoreSlim1.Release(); }
+            finally{ _semaphoreSlim2.Release(); }
             
         }
 
+        private static SemaphoreSlim _semaphoreSlim3 = new SemaphoreSlim(1, 1);
         public void RemoveDisconnectedClientFromAllConnectedClients(ClientInfo disconnectedClient)
         {
-            _semaphoreSlim1.Wait();
+            _semaphoreSlim3.Wait();
             try
             {
                 disconnectedClient.tcpClient.Close();
                 _allConnectedClients.Remove(disconnectedClient);
             }
-            finally { _semaphoreSlim1.Release(); }
+            finally { _semaphoreSlim3.Release(); }
         }
 
+        private static SemaphoreSlim _semaphoreSlim4 = new SemaphoreSlim(1, 1);
         public void SetAllActiveServerUsers(List<ServerUser> allActiveServerUsers)
         {
-            _semaphoreSlim1.Wait();
+            _semaphoreSlim4.Wait();
             try
             {
                 _allActiveServerUsers = allActiveServerUsers;
             }
-            finally { _semaphoreSlim1.Release(); }            
+            finally { _semaphoreSlim4.Release(); }            
         }
 
+        private static SemaphoreSlim _semaphoreSlim5 = new SemaphoreSlim(1, 1);
         public List<ServerUser> GetAllActiveServerUsers( )
         {
-            _semaphoreSlim1.Wait();
+            _semaphoreSlim5.Wait();
             try
             {
                 return _allActiveServerUsers;
             }
-            finally { _semaphoreSlim1.Release(); }
+            finally { _semaphoreSlim5.Release(); }
         }
 
-        public void PollClientConnection(TcpClient client)
+        private static SemaphoreSlim _semaphoreSlim6 = new SemaphoreSlim(1, 1);
+       
+
+        public string SendMessageServerStopping(TcpClient tcpClient, Guid ServerUserId, string username)
         {
-            _semaphoreSlim1.Wait();
-            try
-            {
-                var inspectionMessage = Notification.ServerMessage + "Inspecting Client is Connected.";
-                var response = _transmitter.sendMessageToClient(client, inspectionMessage);
-            }
-            finally { _semaphoreSlim1.Release(); }
-           
+            Payload payloadUsernameError = CreatePayload(MessageActionType.ServerStopped, ServerUserId, username);
+            string messageSent = SendMessage(tcpClient, payloadUsernameError);
+            return messageSent;
         }
 
         public void ResolveClientCommunication(TcpClient tcpClient, ServerActivationInfo serverActivationInfo)
-        {
-            _semaphoreSlim1.Wait();
-            try
-            {            
-                void ProcessMessageFromClientCallback(string receivedMessage)
+        {              
+            void ProcessMessageFromClientCallback(string receivedMessage)
+            {
+                if (string.IsNullOrEmpty(receivedMessage) || receivedMessage.Contains(Notification.Exception))
                 {
-                    if (string.IsNullOrEmpty(receivedMessage) || receivedMessage.Contains(Notification.Exception))
+                    var log = Notification.CRLF + "Client is disconnected";
+                    var disconnectedClient = _allConnectedClients.Where(a => a.tcpClient == tcpClient).FirstOrDefault();
+                    if (disconnectedClient != null) 
                     {
-                        var log = Notification.CRLF + "Client is disconnected";
-                        var disconnectedClient = _allConnectedClients.Where(a => a.tcpClient == tcpClient).FirstOrDefault();
-                        if (disconnectedClient != null) 
-                        {
-                            disconnectedClient.tcpClient.Close();
-                            _allConnectedClients.Remove(disconnectedClient);
-                            serverActivationInfo.ConnectedClientsCallback(_allConnectedClients.Count);
-                        }
+                        disconnectedClient.tcpClient.Close();
+                        _allConnectedClients.Remove(disconnectedClient);
+                        serverActivationInfo.ConnectedClientsCallback(_allConnectedClients.Count);
+                    }
                     
-                        serverActivationInfo.ServerLoggerCallback(log);
-                    }
-                    else if (receivedMessage.Contains(Notification.ClientPayload))
-                    {
-                        ResolveClientPayload(tcpClient, receivedMessage , serverActivationInfo);
-                    }
+                    serverActivationInfo.ServerLoggerCallback(log);
                 }
-
-                MessageFromClientDelegate messageFromClientCallback = new MessageFromClientDelegate(ProcessMessageFromClientCallback);
-
-                _transmitter.ReceiveMessageFromClient(tcpClient, messageFromClientCallback);
-
+                else if (receivedMessage.Contains(Notification.ClientPayload))
+                {
+                    ResolveClientPayload(tcpClient, receivedMessage , serverActivationInfo);
+                }
             }
-            finally { _semaphoreSlim1.Release(); }
+
+            MessageFromClientDelegate messageFromClientCallback = new MessageFromClientDelegate(ProcessMessageFromClientCallback);
+
+            _transmitter.ReceiveMessageFromClient(tcpClient, messageFromClientCallback);
+
 
         }
 

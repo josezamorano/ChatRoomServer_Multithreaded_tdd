@@ -9,6 +9,7 @@
         RetryUsernameTaken = 4,
         RetryUsernameError = 5,
         AssistantCreateChatRoom = 6,
-        BroadcastMessageToChatRoom = 7
+        BroadcastMessageToChatRoom = 7,
+        ServerStopped = 8
     }
 }

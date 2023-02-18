@@ -34,6 +34,8 @@ namespace ChatRoomServer
             txtServerStatus.Text = _serverStopped;
             txtServerStatus.BackColor = txtServerStatus.BackColor;
             txtServerStatus.ForeColor = Color.Red;
+            btnStartServer.Enabled = true;
+            btnStopServer.Enabled = false;
         }
 
         private void txtListenOnPort_TextChanged(object sender, EventArgs e)
@@ -59,10 +61,14 @@ namespace ChatRoomServer
 
         private void BtnStopServer_ClickEvent(object sender, EventArgs e)
         {
-            ServerLoggerDelegate serverLoggerCallback = new ServerLoggerDelegate(ServerLoggerReportCallback);
-            ServerStatusDelegate serverStatusCallback = new ServerStatusDelegate(ServerStatusReportCallback);
-
-            _serverManager.StopServer(serverLoggerCallback , serverStatusCallback);
+            ServerActivationInfo serverActivationInfo = new ServerActivationInfo()
+            {
+                Port = Int32.Parse(txtListenOnPort.Text),
+                ServerLoggerCallback = new ServerLoggerDelegate(ServerLoggerReportCallback),
+                ServerStatusCallback = new ServerStatusDelegate(ServerStatusReportCallback),
+                ConnectedClientsCallback = new ConnectedClientsDelegate(ConnectedClientsReportCallback)
+            };
+            _serverManager.StopServer(serverActivationInfo);
         }
 
         #endregion Event Handlers
@@ -89,6 +95,19 @@ namespace ChatRoomServer
                 txtServerStatus.ForeColor = (isActive) ? Color.Blue : Color.Red;
             };
             txtServerStatus.BeginInvoke(action);
+
+            Action actionBtnStartServer = () => 
+            { 
+                btnStartServer.Enabled = (isActive ) ? false: true;
+            };
+            btnStartServer.BeginInvoke(actionBtnStartServer);
+
+            Action actionBtnStopServer = () => 
+            {
+                btnStopServer.Enabled = (isActive) ? true : false;
+            };
+
+            btnStopServer.BeginInvoke(actionBtnStopServer);
         }
 
         private void ConnectedClientsReportCallback(int activeClientsCount)

@@ -17,7 +17,7 @@ namespace ChatRoomServer.Utils.Interfaces
 
         List<ServerUser> GetAllActiveServerUsers();
 
-        void PollClientConnection(TcpClient client);
+        string SendMessageServerStopping(TcpClient tcpClient, Guid ServerUserId, string username);
 
         void ResolveClientCommunication(TcpClient tcpClient, ServerActivationInfo serverActivationInfo);
     }

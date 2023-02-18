@@ -8,6 +8,6 @@ namespace ChatRoomServer.Utils.Interfaces
 
         void StartServer(ServerActivationInfo serverActivationInfo);
 
-        void StopServer(ServerLoggerDelegate serverLoggerCallback, ServerStatusDelegate serverStatusCallback);
+        void StopServer(ServerActivationInfo serverActivationInfo);
     }
 }

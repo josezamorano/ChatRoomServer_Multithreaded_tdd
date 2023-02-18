@@ -6,7 +6,7 @@ using System.Net.Sockets;
 
 namespace ChatRoomServer.DomainLayer
 {
-    public delegate void MessageFromClientDelegate(string messageFromClient);
+   
     public class ServerManager : IServerManager
     {
         //Private Variables
@@ -79,28 +79,33 @@ namespace ChatRoomServer.DomainLayer
         }
 
 
-        public void StopServer(ServerLoggerDelegate serverLoggerCallback, ServerStatusDelegate serverStatusCallback) 
+        public void StopServer(ServerActivationInfo serverActivationInfo) 
         { 
             _serverIsActive= false;
-            serverStatusCallback(_serverIsActive);
+            serverActivationInfo.ServerStatusCallback(_serverIsActive);
             _serverStatusLogger = Notification.CRLF + "Shutting down Server, disconnecting all clients...";
-            serverLoggerCallback(_serverStatusLogger);
+            serverActivationInfo.ServerLoggerCallback(_serverStatusLogger);
             try
             {
                 foreach (ClientInfo clientInfo in _allConnectedClients)
                 {
+                    Guid serverUserId = (Guid)clientInfo.ServerUserID;
+                    string messageSent = _clientAction.SendMessageServerStopping(clientInfo.tcpClient, serverUserId, clientInfo.Username);
+
                     clientInfo.tcpClient.Close();
                 }
-                _allConnectedClients.Clear();
+               
                 _tcpListener.Stop();
+                _allConnectedClients.Clear();
+                serverActivationInfo.ConnectedClientsCallback(_allConnectedClients.Count);
                 _allActiveServerUsers.Clear();
                 _serverStatusLogger = Notification.CRLF + "Server Stopped Successfully.";               
-                serverLoggerCallback(_serverStatusLogger);
+                serverActivationInfo.ServerLoggerCallback(_serverStatusLogger);
             }
             catch(Exception ex) 
             {
                 _serverStatusLogger = Notification.CRLF + Notification.Exception + "Problem stopping the server, or client connections forcibly closed..." + Notification.CRLF + ex.ToString();
-                serverLoggerCallback(_serverStatusLogger);
+                serverActivationInfo.ServerLoggerCallback(_serverStatusLogger);
             }
         }
 
