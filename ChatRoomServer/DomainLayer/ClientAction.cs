@@ -131,7 +131,6 @@ namespace ChatRoomServer.DomainLayer
             string messageSent = SendMessageUserActivated(tcpClient, serverUserID, payload.ClientUsername);
             if (messageSent.Contains(Notification.Exception))
             {
-                //remove count 
                 ClientInfo disconnectedClient = _allConnectedClients.Where(a => a.tcpClient == tcpClient).FirstOrDefault();
                 if(disconnectedClient != null)
                 {
@@ -154,8 +153,11 @@ namespace ChatRoomServer.DomainLayer
         private string SendMessageUserActivated(TcpClient tcpClient, Guid ServerUserID, string username)
         {
             Payload payloadUsernameOk = CreatePayload(MessageActionType.UserActivated, ServerUserID, username);
-            string messageSent = SendMessage(tcpClient, payloadUsernameOk);
-            return messageSent;
+            foreach(ClientInfo clientInfo in _allConnectedClients)
+            {
+                string messageSent = SendMessage(clientInfo.tcpClient, payloadUsernameOk);
+            }            
+            return Notification.MessageSentOk;
         }
 
         private Payload CreatePayload(MessageActionType messageActionType, Guid? userId, string username)

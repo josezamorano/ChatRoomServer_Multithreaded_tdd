@@ -20,7 +20,8 @@ namespace ChatRoomServer.DomainLayer
         {
             _serverIsActive = false;
             _allConnectedClients = new List<ClientInfo>();      
-            _clientAction = clientAction;            
+            _clientAction = clientAction;
+            _clientAction.SetAllConnectedClients(_allConnectedClients);
         }
 
         private void SeedTESTAllActiveServerUsers()
@@ -127,8 +128,7 @@ namespace ChatRoomServer.DomainLayer
                     serverActivityInfo.ServerLoggerCallback(_serverStatusLogger);
                    
                     Thread threadWorkerClient = new Thread(() => 
-                    {
-                        _clientAction.SetAllConnectedClients(_allConnectedClients);
+                    {                        
                         _clientAction.AddNewClientConnectionToAllConnectedClients(tcpClient);
                         serverActivityInfo.ConnectedClientsCountCallback(_allConnectedClients.Count());   
                         serverActivityInfo.ConnectedClientsListCallback(_allConnectedClients);
