@@ -12,7 +12,6 @@ namespace ChatRoomServer.DomainLayer
         
         //Private Variables
         private List<ClientInfo> _allConnectedClients;
-        private List<ServerUser> _allActiveServerUsers;
 
         ISerializationProvider _serializationProvider;
         ITransmitter _transmitter;
@@ -72,31 +71,8 @@ namespace ChatRoomServer.DomainLayer
             finally { _semaphoreSlim3.Release(); }
         }
 
-        private static SemaphoreSlim _semaphoreSlim4 = new SemaphoreSlim(1, 1);
-        public void SetAllActiveServerUsers(List<ServerUser> allActiveServerUsers)
-        {
-            _semaphoreSlim4.Wait();
-            try
-            {
-                _allActiveServerUsers = allActiveServerUsers;
-            }
-            finally { _semaphoreSlim4.Release(); }            
-        }
 
-        private static SemaphoreSlim _semaphoreSlim5 = new SemaphoreSlim(1, 1);
-        public List<ServerUser> GetAllActiveServerUsers( )
-        {
-            _semaphoreSlim5.Wait();
-            try
-            {
-                return _allActiveServerUsers;
-            }
-            finally { _semaphoreSlim5.Release(); }
-        }
-
-        private static SemaphoreSlim _semaphoreSlim6 = new SemaphoreSlim(1, 1);
-       
-
+        #region Messages To Clients
         public string SendMessageServerStopping(TcpClient tcpClient, Guid ServerUserId, string username)
         {
             Payload payloadUsernameError = CreatePayload(MessageActionType.ServerStopped, ServerUserId, username);
@@ -104,7 +80,8 @@ namespace ChatRoomServer.DomainLayer
             return messageSent;
         }
 
-        public void ResolveClientCommunication(TcpClient tcpClient, ServerActivationInfo serverActivationInfo)
+        #endregion Messages To Clients
+        public void ResolveClientCommunication(TcpClient tcpClient, ServerActivityInfo serverActivityInfo)
         {              
             void ProcessMessageFromClientCallback(string receivedMessage)
             {
@@ -116,14 +93,15 @@ namespace ChatRoomServer.DomainLayer
                     {
                         disconnectedClient.tcpClient.Close();
                         _allConnectedClients.Remove(disconnectedClient);
-                        serverActivationInfo.ConnectedClientsCallback(_allConnectedClients.Count);
+                        serverActivityInfo.ConnectedClientsCountCallback(_allConnectedClients.Count);
+                        serverActivityInfo.ConnectedClientsListCallback(_allConnectedClients);
                     }
                     
-                    serverActivationInfo.ServerLoggerCallback(log);
+                    serverActivityInfo.ServerLoggerCallback(log);
                 }
                 else if (receivedMessage.Contains(Notification.ClientPayload))
                 {
-                    ResolveClientPayload(tcpClient, receivedMessage , serverActivationInfo);
+                    ResolveClientPayload(tcpClient, receivedMessage , serverActivityInfo);
                 }
             }
 
@@ -135,31 +113,35 @@ namespace ChatRoomServer.DomainLayer
         }
 
         #region Private Methods
-        private void ResolveClientPayload(TcpClient tcpClient, string receivedMessage, ServerActivationInfo serverActivationInfo)
+        private void ResolveClientPayload(TcpClient tcpClient, string receivedMessage, ServerActivityInfo serverActivityInfo)
         {
             string payloadMessage = receivedMessage.Replace(Notification.ClientPayload, string.Empty);
             Payload payload = _serializationProvider.DeserializeObject<Payload>(payloadMessage);
-            var duplicateServerUser = _allActiveServerUsers.Where(a => a.Username.ToLower() == payload.ClientUsername.ToLower()).FirstOrDefault();
+            var duplicateServerUser = _allConnectedClients.Where(a =>a.Username.ToLower() == payload.ClientUsername.ToLower()).FirstOrDefault();
             if (duplicateServerUser != null)
             {
                 string messageSentError = SendMessageUsernameTaken(tcpClient, payload.ClientUsername);
-                serverActivationInfo.ServerLoggerCallback(messageSentError);
+                serverActivityInfo.ServerLoggerCallback(messageSentError);
                 return;
             }
             ClientActionResolvedReport clientActionResolvedReport = resolveActionRequestedByClient(payload);
-            _allActiveServerUsers.Add(clientActionResolvedReport.ServerUser);
             UpdateClientInfoInAllConnectedClients(tcpClient, clientActionResolvedReport);
-            string messageSent = SendMessageUserActivated(tcpClient, clientActionResolvedReport.ServerUser.ServerUserID, payload.ClientUsername);
+            serverActivityInfo.ConnectedClientsListCallback(_allConnectedClients);
+            Guid serverUserID = (Guid)clientActionResolvedReport.ServerUser.ServerUserID;
+            string messageSent = SendMessageUserActivated(tcpClient, serverUserID, payload.ClientUsername);
             if (messageSent.Contains(Notification.Exception))
             {
                 //remove count 
                 ClientInfo disconnectedClient = _allConnectedClients.Where(a => a.tcpClient == tcpClient).FirstOrDefault();
-                disconnectedClient.tcpClient.Close();
-                _allConnectedClients.Remove(disconnectedClient);
-                serverActivationInfo.ConnectedClientsCallback(_allConnectedClients.Count);
-
+                if(disconnectedClient != null)
+                {
+                    disconnectedClient.tcpClient.Close();
+                    _allConnectedClients.Remove(disconnectedClient);
+                }               
+                serverActivityInfo.ConnectedClientsCountCallback(_allConnectedClients.Count);
+                serverActivityInfo.ConnectedClientsListCallback(_allConnectedClients);
             }
-            serverActivationInfo.ServerLoggerCallback(messageSent);
+            serverActivityInfo.ServerLoggerCallback(messageSent);
         }
 
         private string SendMessageUsernameTaken(TcpClient tcpClient, string username)
@@ -178,12 +160,23 @@ namespace ChatRoomServer.DomainLayer
 
         private Payload CreatePayload(MessageActionType messageActionType, Guid? userId, string username)
         {
+            var serverUsers = _allConnectedClients.Select(a => new { a?.Username, a?.ServerUserID });
+            List<ServerUser> allActiveServerUsers = new List<ServerUser>();
+            foreach(var user in serverUsers)
+            {
+                ServerUser serverUser = new ServerUser() 
+                { 
+                    Username = user.Username,
+                    ServerUserID= user.ServerUserID,
+                };
+                allActiveServerUsers.Add(serverUser);
+            }
             Payload createdPayload = new Payload()
             {
                 MessageActionType = messageActionType,
                 UserGuid = userId,
                 ClientUsername = username,
-                ActiveServerUsers = _allActiveServerUsers,
+                ActiveServerUsers = allActiveServerUsers,
             };
             return createdPayload;
         }

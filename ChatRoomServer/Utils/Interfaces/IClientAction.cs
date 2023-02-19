@@ -13,12 +13,8 @@ namespace ChatRoomServer.Utils.Interfaces
 
         void RemoveDisconnectedClientFromAllConnectedClients(ClientInfo disconnectedClient);
 
-        void SetAllActiveServerUsers(List<ServerUser> allActiveServerUsers);
-
-        List<ServerUser> GetAllActiveServerUsers();
-
         string SendMessageServerStopping(TcpClient tcpClient, Guid ServerUserId, string username);
 
-        void ResolveClientCommunication(TcpClient tcpClient, ServerActivationInfo serverActivationInfo);
+        void ResolveClientCommunication(TcpClient tcpClient, ServerActivityInfo serverActivityInfo);
     }
 }

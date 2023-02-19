@@ -18,6 +18,7 @@ namespace ChatRoomServer.DomainLayer
         {
             try
             {
+                if (tcpClient == null) { return string.Empty; }
                 StreamWriter streamWriter = _streamProvider.CreateStreamWriter(tcpClient.GetStream());
                 streamWriter.WriteLine(Notification.ServerPayload + messageLine);
                 streamWriter.Flush();

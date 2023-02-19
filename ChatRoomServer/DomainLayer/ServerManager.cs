@@ -14,26 +14,25 @@ namespace ChatRoomServer.DomainLayer
         private TcpListener _tcpListener;
         private string _serverStatusLogger;
         private List<ClientInfo> _allConnectedClients;
-        private List<ServerUser> _allActiveServerUsers;
 
         IClientAction _clientAction;
         public ServerManager(IClientAction clientAction)
         {
             _serverIsActive = false;
-            _allConnectedClients = new List<ClientInfo>();
-            _allActiveServerUsers = new List<ServerUser>();           
+            _allConnectedClients = new List<ClientInfo>();      
             _clientAction = clientAction;            
         }
 
         private void SeedTESTAllActiveServerUsers()
         {
 
-            ServerUser serverUserTest = new ServerUser()
+            ClientInfo clientInfoTest = new ClientInfo()
             {
+                tcpClient = null,
                 Username = "abc",
                 ServerUserID = Guid.NewGuid(),
             };
-            _allActiveServerUsers.Add(serverUserTest);
+             _allConnectedClients.Add(clientInfoTest);
         }
 
         public string GetLocalIP()
@@ -52,18 +51,17 @@ namespace ChatRoomServer.DomainLayer
         }
 
 
-        public void StartServer(ServerActivationInfo serverActivationInfo)            
+        public void StartServer(ServerActivityInfo serverActivityInfo)            
         {
             try
             {                                
                 _allConnectedClients.Clear();
-                _allActiveServerUsers.Clear();
                 SeedTESTAllActiveServerUsers();
 
                 _serverStatusLogger = Notification.CRLF + "Starting Server...";
-                serverActivationInfo.ServerLoggerCallback(_serverStatusLogger);
+                serverActivityInfo.ServerLoggerCallback(_serverStatusLogger);
                 Thread threadListener = new Thread(() => {
-                    ListenForIncomingConnections(serverActivationInfo);
+                    ListenForIncomingConnections(serverActivityInfo);
                 });
                 threadListener.Name = "ThreadServerListener";
                 threadListener.IsBackground = true;
@@ -72,91 +70,89 @@ namespace ChatRoomServer.DomainLayer
             catch(Exception ex)
             {
                 _serverIsActive = false;
-                serverActivationInfo.ServerStatusCallback(_serverIsActive);
+                serverActivityInfo.ServerStatusCallback(_serverIsActive);
                 _serverStatusLogger = Notification.CRLF + Notification.Exception + "Failure attempting to start the server" + Notification.CRLF + ex.ToString();
-                serverActivationInfo.ServerLoggerCallback(_serverStatusLogger);
+                serverActivityInfo.ServerLoggerCallback(_serverStatusLogger);
             }            
         }
 
 
-        public void StopServer(ServerActivationInfo serverActivationInfo) 
+        public void StopServer(ServerActivityInfo serverActivityInfo) 
         { 
             _serverIsActive= false;
-            serverActivationInfo.ServerStatusCallback(_serverIsActive);
+            serverActivityInfo.ServerStatusCallback(_serverIsActive);
             _serverStatusLogger = Notification.CRLF + "Shutting down Server, disconnecting all clients...";
-            serverActivationInfo.ServerLoggerCallback(_serverStatusLogger);
+            serverActivityInfo.ServerLoggerCallback(_serverStatusLogger);
             try
             {
                 foreach (ClientInfo clientInfo in _allConnectedClients)
                 {
                     Guid serverUserId = (Guid)clientInfo.ServerUserID;
                     string messageSent = _clientAction.SendMessageServerStopping(clientInfo.tcpClient, serverUserId, clientInfo.Username);
-
-                    clientInfo.tcpClient.Close();
+                    clientInfo?.tcpClient?.Close();
                 }
                
                 _tcpListener.Stop();
                 _allConnectedClients.Clear();
-                serverActivationInfo.ConnectedClientsCallback(_allConnectedClients.Count);
-                _allActiveServerUsers.Clear();
+                serverActivityInfo.ConnectedClientsCountCallback(_allConnectedClients.Count);
+                serverActivityInfo.ConnectedClientsListCallback(_allConnectedClients);
                 _serverStatusLogger = Notification.CRLF + "Server Stopped Successfully.";               
-                serverActivationInfo.ServerLoggerCallback(_serverStatusLogger);
+                serverActivityInfo.ServerLoggerCallback(_serverStatusLogger);
             }
             catch(Exception ex) 
             {
                 _serverStatusLogger = Notification.CRLF + Notification.Exception + "Problem stopping the server, or client connections forcibly closed..." + Notification.CRLF + ex.ToString();
-                serverActivationInfo.ServerLoggerCallback(_serverStatusLogger);
+                serverActivityInfo.ServerLoggerCallback(_serverStatusLogger);
             }
         }
 
 
         #region Private Methods 
-        private void ListenForIncomingConnections(ServerActivationInfo serverActivationInfo)            
+        private void ListenForIncomingConnections(ServerActivityInfo serverActivityInfo)            
         {
             try
             { 
                 _serverIsActive = true;
-                serverActivationInfo.ServerStatusCallback(_serverIsActive);
-                _tcpListener = new TcpListener(IPAddress.Any, serverActivationInfo.Port);
+                serverActivityInfo.ServerStatusCallback(_serverIsActive);
+                _tcpListener = new TcpListener(IPAddress.Any, serverActivityInfo.Port);
                 _tcpListener.Start();
-                _serverStatusLogger = Notification.CRLF + "Server started. Listening on port: " + serverActivationInfo.Port;               
-                serverActivationInfo.ServerLoggerCallback(_serverStatusLogger);
+                _serverStatusLogger = Notification.CRLF + "Server started. Listening on port: " + serverActivityInfo.Port;               
+                serverActivityInfo.ServerLoggerCallback(_serverStatusLogger);
                 while (_serverIsActive)
                 {
                     _serverStatusLogger = Notification.CRLF + "Waiting for incoming client connection...";                    
-                    serverActivationInfo.ServerLoggerCallback(_serverStatusLogger);
+                    serverActivityInfo.ServerLoggerCallback(_serverStatusLogger);
                     TcpClient tcpClient = _tcpListener.AcceptTcpClient();   // blocks here until client connects
                     _serverStatusLogger = Notification.CRLF + "Incoming client connection accepted...";
-                    serverActivationInfo.ServerLoggerCallback(_serverStatusLogger);
+                    serverActivityInfo.ServerLoggerCallback(_serverStatusLogger);
                    
                     Thread threadWorkerClient = new Thread(() => 
                     {
                         _clientAction.SetAllConnectedClients(_allConnectedClients);
-                        _clientAction.SetAllActiveServerUsers(_allActiveServerUsers);
                         _clientAction.AddNewClientConnectionToAllConnectedClients(tcpClient);
-                        serverActivationInfo.ConnectedClientsCallback(_allConnectedClients.Count());
-                        _clientAction. ResolveClientCommunication(tcpClient, serverActivationInfo);
+                        serverActivityInfo.ConnectedClientsCountCallback(_allConnectedClients.Count());   
+                        serverActivityInfo.ConnectedClientsListCallback(_allConnectedClients);
+                        _clientAction. ResolveClientCommunication(tcpClient, serverActivityInfo);
                     });
                     threadWorkerClient.IsBackground = true;
                     threadWorkerClient.Name = "threadWorkerTcpClient_" + _allConnectedClients.Count();
-                    threadWorkerClient.Start();
-                                
+                    threadWorkerClient.Start();                                
                 }
             }
             catch (SocketException se)
             {   _tcpListener.Stop();
                 _serverStatusLogger = Notification.CRLF + "Problem starting the server." + Notification.CRLF + se.ToString();
-                serverActivationInfo.ServerLoggerCallback(_serverStatusLogger);
+                serverActivityInfo.ServerLoggerCallback(_serverStatusLogger);
             }
             catch (Exception ex)
             {
                 _tcpListener.Stop();
                 _serverStatusLogger = Notification.CRLF + "Problem starting the server." + Notification.CRLF + ex.ToString();
-                serverActivationInfo.ServerLoggerCallback(_serverStatusLogger);
+                serverActivityInfo.ServerLoggerCallback(_serverStatusLogger);
             }
 
             _serverStatusLogger = Notification.CRLF + "Exiting listener thread...";
-            serverActivationInfo.ServerLoggerCallback(_serverStatusLogger);
+            serverActivityInfo.ServerLoggerCallback(_serverStatusLogger);
         }
 
         #endregion Private Methods

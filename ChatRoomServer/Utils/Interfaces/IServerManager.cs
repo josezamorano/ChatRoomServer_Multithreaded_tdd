@@ -6,8 +6,8 @@ namespace ChatRoomServer.Utils.Interfaces
     {
         string GetLocalIP();
 
-        void StartServer(ServerActivationInfo serverActivationInfo);
+        void StartServer(ServerActivityInfo serverActivityInfo);
 
-        void StopServer(ServerActivationInfo serverActivationInfo);
+        void StopServer(ServerActivityInfo serverActivityInfo);
     }
 }
