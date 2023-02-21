@@ -134,9 +134,10 @@ namespace ChatRoomServer.DomainLayer
                             Username = payload.ClientUsername,
                             ServerUserID = Guid.NewGuid(),
                         };
+                        UpdateClientInfo(tcpClient, serverUser);
                         string messageSent = _messageDispatcher.SendMessageUserActivated(_allConnectedClients, (Guid)serverUser.ServerUserID, payload.ClientUsername);
                         VerifyIfMessageIsNullOrContainsException(messageSent,tcpClient,serverActivityInfo);
-                        UpdateClientInfo(tcpClient, serverUser);
+                        
                         serverActivityInfo.ConnectedClientsListCallback(_allConnectedClients);
                     }
                    
