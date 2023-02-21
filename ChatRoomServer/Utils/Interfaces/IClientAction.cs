@@ -11,10 +11,6 @@ namespace ChatRoomServer.Utils.Interfaces
 
         void AddNewClientConnectionToAllConnectedClients(TcpClient client);
 
-        void RemoveDisconnectedClientFromAllConnectedClients(ClientInfo disconnectedClient);
-
-        string SendMessageServerStopping(TcpClient tcpClient, Guid ServerUserId, string username);
-
-        void ResolveClientCommunication(TcpClient tcpClient, ServerActivityInfo serverActivityInfo);
+        void ResolveCommunicationFromClient(TcpClient tcpClient, ServerActivityInfo serverActivityInfo);
     }
 }

@@ -16,11 +16,13 @@ namespace ChatRoomServer.DomainLayer
         private List<ClientInfo> _allConnectedClients;
 
         IClientAction _clientAction;
-        public ServerManager(IClientAction clientAction)
+        IMessageDispatcher _messageDispatcher;
+        public ServerManager(IClientAction clientAction, IMessageDispatcher messageDispatcher)
         {
             _serverIsActive = false;
             _allConnectedClients = new List<ClientInfo>();      
             _clientAction = clientAction;
+            _messageDispatcher = messageDispatcher;
             _clientAction.SetAllConnectedClients(_allConnectedClients);
         }
 
@@ -89,7 +91,7 @@ namespace ChatRoomServer.DomainLayer
                 foreach (ClientInfo clientInfo in _allConnectedClients)
                 {
                     Guid serverUserId = (Guid)clientInfo.ServerUserID;
-                    string messageSent = _clientAction.SendMessageServerStopping(clientInfo.tcpClient, serverUserId, clientInfo.Username);
+                    string messageSent = _messageDispatcher.SendMessageServerStopping(_allConnectedClients ,clientInfo.tcpClient, serverUserId, clientInfo.Username);
                     clientInfo?.tcpClient?.Close();
                 }
                
@@ -132,7 +134,7 @@ namespace ChatRoomServer.DomainLayer
                         _clientAction.AddNewClientConnectionToAllConnectedClients(tcpClient);
                         serverActivityInfo.ConnectedClientsCountCallback(_allConnectedClients.Count());   
                         serverActivityInfo.ConnectedClientsListCallback(_allConnectedClients);
-                        _clientAction. ResolveClientCommunication(tcpClient, serverActivityInfo);
+                        _clientAction. ResolveCommunicationFromClient(tcpClient, serverActivityInfo);
                     });
                     threadWorkerClient.IsBackground = true;
                     threadWorkerClient.Name = "threadWorkerTcpClient_" + _allConnectedClients.Count();

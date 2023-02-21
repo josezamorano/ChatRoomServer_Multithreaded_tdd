@@ -11,5 +11,7 @@ namespace ChatRoomServer.DomainLayer.Models
         public Guid? UserGuid { get; set; }
 
         public List<ServerUser> ActiveServerUsers { get; set; }
+
+        public ChatRoom ChatRoomCreated { get; set; }
     }
 }

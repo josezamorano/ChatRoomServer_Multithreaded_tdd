@@ -2,6 +2,7 @@
 using ChatRoomServer.Services;
 using ChatRoomServer.Utils.Enumerations;
 using ChatRoomServer.Utils.Interfaces;
+using Microsoft.VisualBasic.Logging;
 using System.Net.Sockets;
 
 namespace ChatRoomServer.DomainLayer
@@ -15,10 +16,12 @@ namespace ChatRoomServer.DomainLayer
 
         ISerializationProvider _serializationProvider;
         ITransmitter _transmitter;
-        public ClientAction(ISerializationProvider serializationProvider, ITransmitter transmitter)
+        IMessageDispatcher _messageDispatcher;
+        public ClientAction(ISerializationProvider serializationProvider, ITransmitter transmitter, IMessageDispatcher messageDisptcher)
         {
             _serializationProvider = serializationProvider;
             _transmitter = transmitter;
+            _messageDispatcher = messageDisptcher;
         }
 
 
@@ -59,45 +62,15 @@ namespace ChatRoomServer.DomainLayer
             
         }
 
-        private static SemaphoreSlim _semaphoreSlim3 = new SemaphoreSlim(1, 1);
-        public void RemoveDisconnectedClientFromAllConnectedClients(ClientInfo disconnectedClient)
-        {
-            _semaphoreSlim3.Wait();
-            try
-            {
-                disconnectedClient.tcpClient.Close();
-                _allConnectedClients.Remove(disconnectedClient);
-            }
-            finally { _semaphoreSlim3.Release(); }
-        }
 
-
-        #region Messages To Clients
-        public string SendMessageServerStopping(TcpClient tcpClient, Guid ServerUserId, string username)
-        {
-            Payload payloadUsernameError = CreatePayload(MessageActionType.ServerStopped, ServerUserId, username);
-            string messageSent = SendMessage(tcpClient, payloadUsernameError);
-            return messageSent;
-        }
-
-        #endregion Messages To Clients
-        public void ResolveClientCommunication(TcpClient tcpClient, ServerActivityInfo serverActivityInfo)
+        public void ResolveCommunicationFromClient(TcpClient tcpClient, ServerActivityInfo serverActivityInfo)
         {              
             void ProcessMessageFromClientCallback(string receivedMessage)
             {
                 if (string.IsNullOrEmpty(receivedMessage) || receivedMessage.Contains(Notification.Exception))
-                {
-                    var log = Notification.CRLF + "Client is disconnected";
-                    var disconnectedClient = _allConnectedClients.Where(a => a.tcpClient == tcpClient).FirstOrDefault();
-                    if (disconnectedClient != null) 
-                    {
-                        disconnectedClient.tcpClient.Close();
-                        _allConnectedClients.Remove(disconnectedClient);
-                        serverActivityInfo.ConnectedClientsCountCallback(_allConnectedClients.Count);
-                        serverActivityInfo.ConnectedClientsListCallback(_allConnectedClients);
-                    }
-                    
-                    serverActivityInfo.ServerLoggerCallback(log);
+                {                    
+                    ClientInfo disconnectedClient = _allConnectedClients.Where(a => a.tcpClient == tcpClient).FirstOrDefault();
+                    CloseDisconnectedClient(disconnectedClient, serverActivityInfo);
                 }
                 else if (receivedMessage.Contains(Notification.ClientPayload))
                 {
@@ -108,8 +81,6 @@ namespace ChatRoomServer.DomainLayer
             MessageFromClientDelegate messageFromClientCallback = new MessageFromClientDelegate(ProcessMessageFromClientCallback);
 
             _transmitter.ReceiveMessageFromClient(tcpClient, messageFromClientCallback);
-
-
         }
 
         #region Private Methods
@@ -117,80 +88,43 @@ namespace ChatRoomServer.DomainLayer
         {
             string payloadMessage = receivedMessage.Replace(Notification.ClientPayload, string.Empty);
             Payload payload = _serializationProvider.DeserializeObject<Payload>(payloadMessage);
-            var duplicateServerUser = _allConnectedClients.Where(a =>a.Username.ToLower() == payload.ClientUsername.ToLower()).FirstOrDefault();
-            if (duplicateServerUser != null)
+
+            ClientActionResolvedReport clientActionResolvedReport = resolveActionRequestedByClient( payload);
+            if(clientActionResolvedReport.MessageActionType == MessageActionType.RetryUsernameTaken ||
+                clientActionResolvedReport.MessageActionType == MessageActionType.RetryUsernameError)
             {
-                string messageSentError = SendMessageUsernameTaken(tcpClient, payload.ClientUsername);
+                string messageSentError = _messageDispatcher.SendMessageUsernameTaken(_allConnectedClients, tcpClient, payload.ClientUsername);
                 serverActivityInfo.ServerLoggerCallback(messageSentError);
                 return;
             }
-            ClientActionResolvedReport clientActionResolvedReport = resolveActionRequestedByClient(payload);
-            UpdateClientInfoInAllConnectedClients(tcpClient, clientActionResolvedReport);
+
+            UpdateClientInfo(tcpClient, clientActionResolvedReport);
             serverActivityInfo.ConnectedClientsListCallback(_allConnectedClients);
             Guid serverUserID = (Guid)clientActionResolvedReport.ServerUser.ServerUserID;
-            string messageSent = SendMessageUserActivated(tcpClient, serverUserID, payload.ClientUsername);
+            string messageSent =_messageDispatcher.SendMessageUserActivated(_allConnectedClients, serverUserID, payload.ClientUsername);
             if (messageSent.Contains(Notification.Exception))
             {
                 ClientInfo disconnectedClient = _allConnectedClients.Where(a => a.tcpClient == tcpClient).FirstOrDefault();
-                if(disconnectedClient != null)
-                {
-                    disconnectedClient.tcpClient.Close();
-                    _allConnectedClients.Remove(disconnectedClient);
-                }               
-                serverActivityInfo.ConnectedClientsCountCallback(_allConnectedClients.Count);
-                serverActivityInfo.ConnectedClientsListCallback(_allConnectedClients);
+                CloseDisconnectedClient(disconnectedClient, serverActivityInfo);
             }
             serverActivityInfo.ServerLoggerCallback(messageSent);
         }
 
-        private string SendMessageUsernameTaken(TcpClient tcpClient, string username)
+        private void CloseDisconnectedClient(ClientInfo disconnectedClient , ServerActivityInfo serverActivityInfo)
         {
-            Payload payloadUsernameError = CreatePayload(MessageActionType.RetryUsernameTaken, null, username);
-            string messageSent = SendMessage(tcpClient, payloadUsernameError);
-            return messageSent;
-        }
-
-        private string SendMessageUserActivated(TcpClient tcpClient, Guid ServerUserID, string username)
-        {
-            Payload payloadUsernameOk = CreatePayload(MessageActionType.UserActivated, ServerUserID, username);
-            foreach(ClientInfo clientInfo in _allConnectedClients)
+            if (disconnectedClient != null)
             {
-                string messageSent = SendMessage(clientInfo.tcpClient, payloadUsernameOk);
-            }            
-            return Notification.MessageSentOk;
-        }
+                disconnectedClient.tcpClient.Close();
+                _allConnectedClients.Remove(disconnectedClient);
 
-        private Payload CreatePayload(MessageActionType messageActionType, Guid? userId, string username)
-        {
-            var serverUsers = _allConnectedClients.Select(a => new { a?.Username, a?.ServerUserID });
-            List<ServerUser> allActiveServerUsers = new List<ServerUser>();
-            foreach(var user in serverUsers)
-            {
-                ServerUser serverUser = new ServerUser() 
-                { 
-                    Username = user.Username,
-                    ServerUserID= user.ServerUserID,
-                };
-                allActiveServerUsers.Add(serverUser);
+                var log = Notification.CRLF + "Client is disconnected";
+                serverActivityInfo.ServerLoggerCallback(log);
             }
-            Payload createdPayload = new Payload()
-            {
-                MessageActionType = messageActionType,
-                UserGuid = userId,
-                ClientUsername = username,
-                ActiveServerUsers = allActiveServerUsers,
-            };
-            return createdPayload;
+            serverActivityInfo.ConnectedClientsCountCallback(_allConnectedClients.Count);
+            serverActivityInfo.ConnectedClientsListCallback(_allConnectedClients);
         }
-
-        private string SendMessage(TcpClient tcpClient,  Payload payload)
-        {
-            string serializedObject = _serializationProvider.SerializeObject(payload);
-            string messageSent = _transmitter.sendMessageToClient(tcpClient, serializedObject);
-            return messageSent;
-        }
-
-        private void UpdateClientInfoInAllConnectedClients(TcpClient tcpClient, ClientActionResolvedReport clientActionResolvedReport)
+       
+        private void UpdateClientInfo(TcpClient tcpClient, ClientActionResolvedReport clientActionResolvedReport)
         {            
             var selectedClientInfo = _allConnectedClients.Where(a => a.tcpClient == tcpClient).FirstOrDefault();
             if(selectedClientInfo != null)
@@ -208,14 +142,24 @@ namespace ChatRoomServer.DomainLayer
             {
                 case MessageActionType.ClientConnectToServer:
                 case MessageActionType.CreateUser:
-                    ServerUser serverUser = new ServerUser()
-                    {
-                        Username = payload.ClientUsername,
-                        ServerUserID = Guid.NewGuid(),
-                    };
 
-                    clientActionResolvedReport.MessageActionType = payload.MessageActionType;
-                    clientActionResolvedReport.ServerUser = serverUser;
+                    var duplicateServerUser = _allConnectedClients.Where(a => a.Username.ToLower() == payload.ClientUsername.ToLower()).FirstOrDefault();
+                    if (duplicateServerUser != null)
+                    {                       
+                        clientActionResolvedReport.MessageActionType = MessageActionType.RetryUsernameTaken;
+                    }
+                    else
+                    {
+                        ServerUser serverUser = new ServerUser()
+                        {
+                            Username = payload.ClientUsername,
+                            ServerUserID = Guid.NewGuid(),
+                        };
+
+                        clientActionResolvedReport.MessageActionType = payload.MessageActionType;
+                        clientActionResolvedReport.ServerUser = serverUser;
+                    }
+                   
                     break;
             }
 
