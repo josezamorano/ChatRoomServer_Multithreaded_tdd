@@ -2,7 +2,6 @@
 using ChatRoomServer.Services;
 using ChatRoomServer.Utils.Enumerations;
 using ChatRoomServer.Utils.Interfaces;
-using Microsoft.VisualBasic.Logging;
 using System.Net.Sockets;
 
 namespace ChatRoomServer.DomainLayer
@@ -67,14 +66,12 @@ namespace ChatRoomServer.DomainLayer
         {              
             void ProcessMessageFromClientCallback(string receivedMessage)
             {
-                if (string.IsNullOrEmpty(receivedMessage) || receivedMessage.Contains(Notification.Exception))
+                var messageIsFailed = VerifyIfMessageIsNullOrContainsException(receivedMessage, tcpClient, serverActivityInfo);
+                if(messageIsFailed) { return; }
+
+                if (receivedMessage.Contains(Notification.ClientPayload))
                 {                    
-                    ClientInfo disconnectedClient = _allConnectedClients.Where(a => a.tcpClient == tcpClient).FirstOrDefault();
-                    CloseDisconnectedClient(disconnectedClient, serverActivityInfo);
-                }
-                else if (receivedMessage.Contains(Notification.ClientPayload))
-                {
-                    ResolveClientPayload(tcpClient, receivedMessage , serverActivityInfo);
+                    ResolveActionRequestedByClient(receivedMessage, tcpClient, serverActivityInfo);
                 }
             }
 
@@ -83,34 +80,22 @@ namespace ChatRoomServer.DomainLayer
             _transmitter.ReceiveMessageFromClient(tcpClient, messageFromClientCallback);
         }
 
-        #region Private Methods
-        private void ResolveClientPayload(TcpClient tcpClient, string receivedMessage, ServerActivityInfo serverActivityInfo)
+        #region Private Methods 
+
+        private bool VerifyIfMessageIsNullOrContainsException(string message, TcpClient tcpClient, ServerActivityInfo serverActivityInfo)
         {
-            string payloadMessage = receivedMessage.Replace(Notification.ClientPayload, string.Empty);
-            Payload payload = _serializationProvider.DeserializeObject<Payload>(payloadMessage);
-
-            ClientActionResolvedReport clientActionResolvedReport = resolveActionRequestedByClient( payload);
-            if(clientActionResolvedReport.MessageActionType == MessageActionType.RetryUsernameTaken ||
-                clientActionResolvedReport.MessageActionType == MessageActionType.RetryUsernameError)
+            if (string.IsNullOrEmpty(message) || message.Contains(Notification.Exception))
             {
-                string messageSentError = _messageDispatcher.SendMessageUsernameTaken(_allConnectedClients, tcpClient, payload.ClientUsername);
-                serverActivityInfo.ServerLoggerCallback(messageSentError);
-                return;
-            }
-
-            UpdateClientInfo(tcpClient, clientActionResolvedReport);
-            serverActivityInfo.ConnectedClientsListCallback(_allConnectedClients);
-            Guid serverUserID = (Guid)clientActionResolvedReport.ServerUser.ServerUserID;
-            string messageSent =_messageDispatcher.SendMessageUserActivated(_allConnectedClients, serverUserID, payload.ClientUsername);
-            if (messageSent.Contains(Notification.Exception))
-            {
-                ClientInfo disconnectedClient = _allConnectedClients.Where(a => a.tcpClient == tcpClient).FirstOrDefault();
+                var disconnectedClient = _allConnectedClients.Where(a => a.tcpClient == tcpClient).FirstOrDefault();
                 CloseDisconnectedClient(disconnectedClient, serverActivityInfo);
+                return true;
             }
-            serverActivityInfo.ServerLoggerCallback(messageSent);
+            serverActivityInfo.ServerLoggerCallback(message);
+            return false;
         }
 
-        private void CloseDisconnectedClient(ClientInfo disconnectedClient , ServerActivityInfo serverActivityInfo)
+
+        private void CloseDisconnectedClient(ClientInfo disconnectedClient, ServerActivityInfo serverActivityInfo)
         {
             if (disconnectedClient != null)
             {
@@ -123,21 +108,14 @@ namespace ChatRoomServer.DomainLayer
             serverActivityInfo.ConnectedClientsCountCallback(_allConnectedClients.Count);
             serverActivityInfo.ConnectedClientsListCallback(_allConnectedClients);
         }
-       
-        private void UpdateClientInfo(TcpClient tcpClient, ClientActionResolvedReport clientActionResolvedReport)
-        {            
-            var selectedClientInfo = _allConnectedClients.Where(a => a.tcpClient == tcpClient).FirstOrDefault();
-            if(selectedClientInfo != null)
-            {
-                selectedClientInfo.ServerUserID = clientActionResolvedReport.ServerUser.ServerUserID;
-                selectedClientInfo.Username = clientActionResolvedReport.ServerUser.Username;
-            }            
-        }
-                
 
-        private ClientActionResolvedReport resolveActionRequestedByClient(Payload payload)
+
+
+        private void ResolveActionRequestedByClient(string receivedMessage,  TcpClient tcpClient , ServerActivityInfo serverActivityInfo)
         {
-            ClientActionResolvedReport clientActionResolvedReport = new ClientActionResolvedReport();
+            string payloadMessage = receivedMessage.Replace(Notification.ClientPayload, string.Empty);
+            Payload payload = _serializationProvider.DeserializeObject<Payload>(payloadMessage);
+                       
             switch (payload.MessageActionType)
             {
                 case MessageActionType.ClientConnectToServer:
@@ -145,8 +123,9 @@ namespace ChatRoomServer.DomainLayer
 
                     var duplicateServerUser = _allConnectedClients.Where(a => a.Username.ToLower() == payload.ClientUsername.ToLower()).FirstOrDefault();
                     if (duplicateServerUser != null)
-                    {                       
-                        clientActionResolvedReport.MessageActionType = MessageActionType.RetryUsernameTaken;
+                    {
+                        string messageSentError = _messageDispatcher.SendMessageUsernameTaken(_allConnectedClients, tcpClient, payload.ClientUsername);
+                        VerifyIfMessageIsNullOrContainsException(messageSentError, tcpClient, serverActivityInfo);
                     }
                     else
                     {
@@ -155,17 +134,36 @@ namespace ChatRoomServer.DomainLayer
                             Username = payload.ClientUsername,
                             ServerUserID = Guid.NewGuid(),
                         };
-
-                        clientActionResolvedReport.MessageActionType = payload.MessageActionType;
-                        clientActionResolvedReport.ServerUser = serverUser;
+                        string messageSent = _messageDispatcher.SendMessageUserActivated(_allConnectedClients, (Guid)serverUser.ServerUserID, payload.ClientUsername);
+                        VerifyIfMessageIsNullOrContainsException(messageSent,tcpClient,serverActivityInfo);
+                        UpdateClientInfo(tcpClient, serverUser);
+                        serverActivityInfo.ConnectedClientsListCallback(_allConnectedClients);
                     }
                    
                     break;
-            }
 
-            return clientActionResolvedReport;
+                case MessageActionType.AssistantCreateChatRoomAndSendInvites:
+
+                    //Add ChatRoomID and send to the chatRoom manager
+
+                    //Add InviteID and sent to all guest Server Users
+
+
+
+                    break;
+            }
         }
 
+        
+        private void UpdateClientInfo(TcpClient tcpClient, ServerUser serverUser)
+        {
+            var selectedClientInfo = _allConnectedClients.Where(a => a.tcpClient == tcpClient).FirstOrDefault();
+            if (selectedClientInfo != null)
+            {
+                selectedClientInfo.ServerUserID = serverUser.ServerUserID;
+                selectedClientInfo.Username = serverUser.Username;
+            }
+        }
         #endregion Private Methods
 
     }
