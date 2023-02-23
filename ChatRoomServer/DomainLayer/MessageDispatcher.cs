@@ -35,7 +35,6 @@ namespace ChatRoomServer.DomainLayer
             return Notification.MessageSentOk;
         }
 
-
         public string SendMessageUsernameTaken(List<ClientInfo> allConnectedClients, TcpClient tcpClient, string username)
         {
             Payload payloadUsernameError = _objectCreator.CreatePayload(allConnectedClients, MessageActionType.RetryUsernameTaken, null, username);
@@ -43,6 +42,21 @@ namespace ChatRoomServer.DomainLayer
             return messageSent;
         }
 
+        public string SendMessageInviteDispatchedToUser(List<ClientInfo> allConnectedClients,ClientInfo clientInfo, Invite invite)
+        {
+            ServerUser targetServerUser = new ServerUser() { ServerUserID = clientInfo.ServerUserID, Username = clientInfo.Username};
+            Payload payloadChatRoomCreated = _objectCreator.CreatePayload(allConnectedClients, MessageActionType.ServerInviteSent, targetServerUser, invite);
+            string messageSent = SendMessage(clientInfo.tcpClient, payloadChatRoomCreated);
+            return messageSent;
+        }
+
+        public string SendMessageChatRoomCreated(List<ClientInfo> allConnectedClients, ClientInfo clientInfo, ChatRoom chatRoom)
+        {
+            ServerUser targetServerUser = new ServerUser() { ServerUserID = clientInfo.ServerUserID, Username = clientInfo.Username };
+            Payload payloadChatRoomCreated = _objectCreator.CreatePayload(allConnectedClients, MessageActionType.ServerChatRoomCreated, targetServerUser, chatRoom);
+            string messageSent = SendMessage(clientInfo.tcpClient, payloadChatRoomCreated);
+            return messageSent;
+        }
 
         #region Private Methods
         private string SendMessage(TcpClient tcpClient, Payload payload)

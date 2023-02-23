@@ -1,4 +1,5 @@
 ﻿using ChatRoomServer.Utils.Enumerations;
+using System.Security.Permissions;
 
 namespace ChatRoomServer.DomainLayer.Models
 {
@@ -8,10 +9,12 @@ namespace ChatRoomServer.DomainLayer.Models
 
         public string ClientUsername { get; set; }
 
-        public Guid? UserGuid { get; set; }
+        public Guid? UserId { get; set; }
 
         public List<ServerUser> ActiveServerUsers { get; set; }
 
         public ChatRoom ChatRoomCreated { get; set; }
+
+        public Invite InviteToGuestUser { get; set; }
     }
 }

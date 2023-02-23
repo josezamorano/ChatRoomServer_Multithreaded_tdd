@@ -8,11 +8,12 @@
         UserActivated = 3,
         RetryUsernameTaken = 4,
         RetryUsernameError = 5,
-        AssistantCreateChatRoomAndSendInvites = 6,
-        ServerChatRoomCreatedAndInvitesSent = 7,
-        ServerUserAcceptInvite = 8,
-        ServerUserDeclineInvite = 9,
-        BroadcastMessageToChatRoom = 10,
-        ServerStopped = 11
+        ManagerCreateChatRoomAndSendInvites = 6,
+        ServerChatRoomCreated = 7,
+        ServerInviteSent = 8,
+        ServerUserAcceptInvite = 9,
+        ServerUserDeclineInvite = 10,
+        BroadcastMessageToChatRoom = 11,
+        ServerStopped = 12
     }
 }

@@ -1,4 +1,6 @@
-﻿namespace ChatRoomServer.DomainLayer.Models
+﻿using ChatRoomServer.Utils.Enumerations;
+
+namespace ChatRoomServer.DomainLayer.Models
 {
     public class ChatRoom
     {
@@ -7,6 +9,8 @@
         public string ChatRoomName { get; set; }
 
         public string ChatRoomIdentifierNameId { get; set; }
+
+        public ChatRoomStatus ChatRoomStatus { get; set; }
 
         public ServerUser Creator { get; set; }
 

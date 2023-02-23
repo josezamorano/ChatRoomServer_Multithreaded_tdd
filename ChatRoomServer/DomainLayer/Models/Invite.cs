@@ -4,6 +4,8 @@ namespace ChatRoomServer.DomainLayer.Models
 {
     public class Invite
     {
+        public Guid InviteId { get; set; }
+
         public ServerUser ChatRoomCreator { get; set; }
 
         public ServerUser GuestServerUser { get; set; }

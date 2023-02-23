@@ -20,8 +20,9 @@ namespace ChatRoomServer
 
             IServerManager _serverManager = container.Resolve<IServerManager>();
             IInputValidator _inputValidator = container.Resolve<IInputValidator>();
+            IChatRoomManager _chatRoomManager = container.Resolve<IChatRoomManager>();
 
-            Application.Run(new PresentationLayer(_serverManager , _inputValidator));
+            Application.Run(new PresentationLayer(_serverManager , _inputValidator , _chatRoomManager));
         }
     }
 }

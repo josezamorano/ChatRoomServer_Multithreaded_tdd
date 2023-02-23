@@ -16,11 +16,16 @@ namespace ChatRoomServer.DomainLayer
         ISerializationProvider _serializationProvider;
         ITransmitter _transmitter;
         IMessageDispatcher _messageDispatcher;
-        public ClientAction(ISerializationProvider serializationProvider, ITransmitter transmitter, IMessageDispatcher messageDisptcher)
+        IChatRoomManager _chatRoomManager;
+        public ClientAction(ISerializationProvider serializationProvider,
+                            ITransmitter transmitter, 
+                            IMessageDispatcher messageDisptcher, 
+                            IChatRoomManager chatRoomManager)
         {
             _serializationProvider = serializationProvider;
             _transmitter = transmitter;
             _messageDispatcher = messageDisptcher;
+            _chatRoomManager = chatRoomManager;
         }
 
 
@@ -121,7 +126,7 @@ namespace ChatRoomServer.DomainLayer
                 case MessageActionType.ClientConnectToServer:
                 case MessageActionType.CreateUser:
 
-                    var duplicateServerUser = _allConnectedClients.Where(a => a.Username.ToLower() == payload.ClientUsername.ToLower()).FirstOrDefault();
+                    ClientInfo duplicateServerUser = _allConnectedClients.Where(a => a.Username.ToLower() == payload.ClientUsername.ToLower()).FirstOrDefault();
                     if (duplicateServerUser != null)
                     {
                         string messageSentError = _messageDispatcher.SendMessageUsernameTaken(_allConnectedClients, tcpClient, payload.ClientUsername);
@@ -143,13 +148,28 @@ namespace ChatRoomServer.DomainLayer
                    
                     break;
 
-                case MessageActionType.AssistantCreateChatRoomAndSendInvites:
+                case MessageActionType.ManagerCreateChatRoomAndSendInvites:
 
-                    //Add ChatRoomID and send to the chatRoom manager
-
-                    //Add InviteID and sent to all guest Server Users
-
-
+                    var chatRoomCreated = _chatRoomManager.CreateChatRoom(payload.ChatRoomCreated);                   
+                    foreach (Invite inviteToGuest in chatRoomCreated.AllInvitesSentToGuestUsers)
+                    {
+                        ClientInfo clientInfo = _allConnectedClients.Where(a=>a.ServerUserID == inviteToGuest.GuestServerUser.ServerUserID).FirstOrDefault();
+                        if(clientInfo != null && clientInfo.tcpClient.Connected )
+                        {
+                            string messageSent = _messageDispatcher.SendMessageInviteDispatchedToUser (_allConnectedClients, clientInfo, inviteToGuest);
+                            VerifyIfMessageIsNullOrContainsException(messageSent, tcpClient, serverActivityInfo);
+                        }
+                    }
+                    //Send the updated chatRoom Information to the chatRoom creator
+                    if(payload.UserId == payload.ChatRoomCreated.Creator.ServerUserID)
+                    {
+                        ClientInfo chatRoomCreatorClientInfo = _allConnectedClients.Where(a => a.ServerUserID == payload.UserId).FirstOrDefault();
+                        if (chatRoomCreatorClientInfo != null)
+                        {
+                            string messageSent = _messageDispatcher.SendMessageChatRoomCreated(_allConnectedClients, chatRoomCreatorClientInfo, payload.ChatRoomCreated);
+                            VerifyIfMessageIsNullOrContainsException(messageSent, tcpClient, serverActivityInfo);
+                        }
+                    }                    
 
                     break;
             }

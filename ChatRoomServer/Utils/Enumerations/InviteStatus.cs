@@ -2,8 +2,9 @@
 {
     public enum InviteStatus
     {
-        PendingResponse = 1,
-        AcceptedInvite = 2,
-        DeclinedInvite = 3
+        CreatedNotSent = 1,
+        SentPendingResponse = 2,
+        Accepted = 3,
+        Declined = 4
     }
 }

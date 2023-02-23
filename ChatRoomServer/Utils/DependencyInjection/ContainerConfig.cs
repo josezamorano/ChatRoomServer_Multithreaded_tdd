@@ -11,7 +11,7 @@ namespace ChatRoomServer.Utils.DependencyInjection
         public static Autofac.IContainer Configure()
         {
             ContainerBuilder builder = new ContainerBuilder();
-            builder.RegisterType<ChatRoomManager>().As<IChatRoomManager>();
+            builder.RegisterType<ChatRoomManager>().As<IChatRoomManager>().SingleInstance();
             builder.RegisterType<ClientAction>().As<IClientAction>();
             builder.RegisterType<InputValidator>().As<IInputValidator>();
             builder.RegisterType<MessageDispatcher>().As<IMessageDispatcher>();

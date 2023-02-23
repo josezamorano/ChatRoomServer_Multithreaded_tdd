@@ -11,6 +11,8 @@ namespace ChatRoomServer.Utils.Interfaces
 
         string SendMessageUsernameTaken(List<ClientInfo> allConnectedClients, TcpClient tcpClient, string username);
 
+        string SendMessageInviteDispatchedToUser(List<ClientInfo> allConnectedClients, ClientInfo clientInfo, Invite invite);
 
+        string SendMessageChatRoomCreated(List<ClientInfo> allConnectedClients, ClientInfo clientInfo, ChatRoom chatRoom);
     }
 }
