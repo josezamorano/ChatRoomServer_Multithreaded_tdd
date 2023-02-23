@@ -306,7 +306,10 @@
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(1189, 485);
             Controls.Add(tableLayoutPanel1);
+            FormBorderStyle = FormBorderStyle.FixedSingle;
             Margin = new Padding(3, 2, 3, 2);
+            MaximizeBox = false;
+            MinimizeBox = false;
             Name = "PresentationLayer";
             Text = "ChatServer";
             Load += WinFormOnLoad_Event;

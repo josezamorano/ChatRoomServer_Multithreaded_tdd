@@ -2,6 +2,7 @@ using ChatRoomServer.DomainLayer.Models;
 using ChatRoomServer.Utils.Enumerations;
 using ChatRoomServer.Utils.Interfaces;
 using System.Configuration;
+using System.Linq;
 
 namespace ChatRoomServer
 {
@@ -199,7 +200,7 @@ namespace ChatRoomServer
                 ChatRoomIdentifierNameId = "abc-111",
                 ChatRoomStatus = ChatRoomStatus.OpenActive,
                 AllActiveUsersInChatRoom = new List<ServerUser> { new ServerUser() { Username = "abc" }, new ServerUser() { Username = "mno" }, new ServerUser() { Username = "Jonathan" }, new ServerUser() { Username = "Surex" } },
-                AllInvitesSentToGuestUsers = new List<Invite> { new Invite() { GuestServerUser = new ServerUser() { Username = "TOM" } }, }
+                AllInvitesSentToGuestUsers = new List<Invite> { new Invite() { GuestServerUser = new ServerUser() { Username = "TOM" }, InviteStatus = InviteStatus.Accepted }, }
 
             };
             ChatRoom chatRoom2 = new ChatRoom()
@@ -207,7 +208,7 @@ namespace ChatRoomServer
                 ChatRoomIdentifierNameId = "abc-111",
                 ChatRoomStatus = ChatRoomStatus.OpenActive,
                 AllActiveUsersInChatRoom = new List<ServerUser> { new ServerUser() { Username = "abc1" }, new ServerUser() { Username = "mno" } },
-                AllInvitesSentToGuestUsers = new List<Invite> { new Invite() { GuestServerUser = new ServerUser() { Username = "TOM" } }, }
+                AllInvitesSentToGuestUsers = new List<Invite> { new Invite() { GuestServerUser = new ServerUser() { Username = "Mark" }, InviteStatus = InviteStatus.SentPendingResponse } }
 
             };
             ChatRoom chatRoom3 = new ChatRoom()
@@ -215,7 +216,7 @@ namespace ChatRoomServer
                 ChatRoomIdentifierNameId = "abc-111",
                 ChatRoomStatus = ChatRoomStatus.OpenActive,
                 AllActiveUsersInChatRoom = new List<ServerUser> { new ServerUser() { Username = "abc2" }, new ServerUser() { Username = "mno" } },
-                AllInvitesSentToGuestUsers = new List<Invite> { new Invite() { GuestServerUser = new ServerUser() { Username = "TOM" } }, }
+                AllInvitesSentToGuestUsers = new List<Invite> { new Invite() { GuestServerUser = new ServerUser() { Username = "Pam" }, InviteStatus = InviteStatus.SentPendingResponse }, }
 
             };
             ChatRoom chatRoom4 = new ChatRoom()
@@ -223,7 +224,7 @@ namespace ChatRoomServer
                 ChatRoomIdentifierNameId = "abc-111",
                 ChatRoomStatus = ChatRoomStatus.OpenActive,
                 AllActiveUsersInChatRoom = new List<ServerUser> { new ServerUser() { Username = "abc3" }, new ServerUser() { Username = "mno" } },
-                AllInvitesSentToGuestUsers = new List<Invite> { new Invite() { GuestServerUser = new ServerUser() { Username = "TOM" } }, }
+                AllInvitesSentToGuestUsers = new List<Invite> { new Invite() { GuestServerUser = new ServerUser() { Username = "Jack" }, InviteStatus = InviteStatus.SentPendingResponse }, }
 
             };
             allChatRooms.Add(chatRoom1);
@@ -252,6 +253,12 @@ namespace ChatRoomServer
                 string chatRoomStatus = Enum.GetName(typeof(ChatRoomStatus), chatRooms[a].ChatRoomStatus);
                 string chatRoomIdentifier = chatRooms[a].ChatRoomIdentifierNameId;
                 string[] allServerUsers = chatRooms[a].AllActiveUsersInChatRoom.Select(a => a.Username).ToArray();
+                string[] allInvitesStatusesArray = new string[chatRooms[a].AllInvitesSentToGuestUsers.Count];
+                for (var i = 0; i < chatRooms[a].AllInvitesSentToGuestUsers.Count; i++)
+                {
+                    allInvitesStatusesArray[i] = chatRooms[a].AllInvitesSentToGuestUsers[i].GuestServerUser.Username + "_" + Enum.GetName(typeof(InviteStatus), chatRooms[a].AllInvitesSentToGuestUsers[i].InviteStatus);
+                }
+
                 var tlpRow = new TableLayoutPanel();
                 tlpRow.Height = 150;
                 tlpRow.BackColor = Color.LightGray;
@@ -272,9 +279,9 @@ namespace ChatRoomServer
                 tlpRow.Controls.Add(new Label() { Text = "Chat Room Identifier:", BorderStyle = BorderStyle.None, Width = 150, TextAlign = ContentAlignment.MiddleRight }, 0, 0);
                 tlpRow.Controls.Add(new Label() { Text = "Chat Room Status:", BorderStyle = BorderStyle.None, Width = 150, TextAlign = ContentAlignment.MiddleRight }, 0, 1);
                 tlpRow.Controls.Add(new Label() { Text = "Active Users:", BorderStyle = BorderStyle.None, Width = 150, TextAlign = ContentAlignment.MiddleRight }, 0, 2);
-                tlpRow.Controls.Add(new Label() { Text = "", BorderStyle = BorderStyle.None, Width = 150, TextAlign = ContentAlignment.MiddleRight }, 0, 3);
+                tlpRow.Controls.Add(new Label() { Text = allServerUsers.Length.ToString(), BorderStyle = BorderStyle.None, Width = 150, TextAlign = ContentAlignment.MiddleCenter }, 0, 3);
                 tlpRow.Controls.Add(new Label() { Text = "Invites Statuses:", BorderStyle = BorderStyle.None, Width = 150, TextAlign = ContentAlignment.MiddleRight }, 0, 4);
-                tlpRow.Controls.Add(new Label() { Text = "", BorderStyle = BorderStyle.None, Width = 150, TextAlign = ContentAlignment.MiddleRight }, 0, 5);
+                tlpRow.Controls.Add(new Label() { Text = allInvitesStatusesArray.Length.ToString(), BorderStyle = BorderStyle.None, Width = 150, TextAlign = ContentAlignment.MiddleCenter }, 0, 5);
 
                 tlpRow.Controls.Add(new Label() { Text = chatRoomIdentifier, Enabled = false, Width = 350, BorderStyle = BorderStyle.FixedSingle }, 1, 0);
                 tlpRow.Controls.Add(new Label() { Text = chatRoomStatus, Enabled = false, Width = 350, BorderStyle = BorderStyle.FixedSingle }, 1, 1);
@@ -283,10 +290,13 @@ namespace ChatRoomServer
                 tlpRow.SetRowSpan(allActiveUsers, 2);
                 tlpRow.Controls.Add(allActiveUsers, 1, 2);
                 ListBox allInvites = new ListBox() { Enabled = true, Width = 350, BackColor = SystemColors.Control, BorderStyle = BorderStyle.Fixed3D };
+                allInvites.Items.AddRange(allInvitesStatusesArray);
                 tlpRow.SetRowSpan(allInvites, 2);
                 tlpRow.Controls.Add(allInvites, 1, 4);
 
-
+                TextBox conversation = new TextBox() { Multiline = true, Dock = DockStyle.Fill, BorderStyle = BorderStyle.FixedSingle, ScrollBars = ScrollBars.Vertical, Enabled = false };
+                tlpRow.SetRowSpan(conversation, 6);
+                tlpRow.Controls.Add(conversation, 3, 0);
 
                 tlpCanvas.Controls.Add(tlpRow, 0, a);
             }
