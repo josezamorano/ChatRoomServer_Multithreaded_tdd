@@ -21,6 +21,6 @@ namespace ChatRoomServer.Utils.Interfaces
 
         bool UpdateInviteStatusInChatRoom(Guid chatRoomId, Guid inviteId, InviteStatus inviteStatus);
 
-        bool RecordMessageInChatRoom(Guid chatRoomId, ServerUser serverUser, string message);
+        bool RecordMessageInChatRoomConversation(Guid chatRoomId, string message);
     }
 }

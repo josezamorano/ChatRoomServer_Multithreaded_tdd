@@ -270,6 +270,8 @@ namespace ChatRoomServer
                     string chatRoomIdentifier = chatRooms[a].ChatRoomIdentifierNameId;
                     string[] allServerUsers = chatRooms[a].AllActiveUsersInChatRoom.Select(a => a.Username).ToArray();
                     string[] allInvitesStatusesArray = new string[chatRooms[a].AllInvitesSentToGuestUsers.Count];
+                    string conversationRecord = chatRooms[a].ConversationRecord;
+
                     for (var i = 0; i < chatRooms[a].AllInvitesSentToGuestUsers.Count; i++)
                     {
                         allInvitesStatusesArray[i] = chatRooms[a].AllInvitesSentToGuestUsers[i].GuestServerUser.Username + "_" + Enum.GetName(typeof(InviteStatus), chatRooms[a].AllInvitesSentToGuestUsers[i].InviteStatus);
@@ -316,7 +318,7 @@ namespace ChatRoomServer
                     tlpRow.SetRowSpan(allInvites, 2);
                     tlpRow.Controls.Add(allInvites, 1, 4);
 
-                    TextBox conversation = new TextBox() { Multiline = true, Dock = DockStyle.Fill, BorderStyle = BorderStyle.FixedSingle, ScrollBars = ScrollBars.Vertical, Enabled = false };
+                    TextBox conversation = new TextBox() { Text = conversationRecord, Multiline = true, Dock = DockStyle.Fill, BorderStyle = BorderStyle.FixedSingle, ScrollBars = ScrollBars.Vertical, Enabled = false };
                     conversation.ScrollBars = ScrollBars.Vertical;
                     tlpRow.SetRowSpan(conversation, 6);
                     tlpRow.Controls.Add(conversation, 3, 0);

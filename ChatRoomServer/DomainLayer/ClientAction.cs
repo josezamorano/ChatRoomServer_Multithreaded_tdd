@@ -163,6 +163,7 @@ namespace ChatRoomServer.DomainLayer
                     ChatRoom selectedChatRoom = _chatRoomManager.GetAllCreatedChatRooms().Where(a => a.ChatRoomId == payload.ChatRoomCreated.ChatRoomId).FirstOrDefault();
                     if(selectedChatRoom != null)
                     {
+                        _chatRoomManager.RecordMessageInChatRoomConversation(selectedChatRoom.ChatRoomId, message);
                         foreach (var activeUser in selectedChatRoom.AllActiveUsersInChatRoom)
                         {
                             ClientInfo clientInfo = _allConnectedClients.Where(a=>a.ServerUserID == activeUser.ServerUserID).FirstOrDefault();

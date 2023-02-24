@@ -6,7 +6,7 @@ namespace ChatRoomServer.DomainLayer
 {
     public class ChatRoomManager : IChatRoomManager
     {
-
+        private const string CRLF = "\r\n";
         private ChatRoomsUpdateDelegate _chatRoomUpdateCallback;
         private List<ChatRoom> _allCreatedChatRooms;
 
@@ -100,13 +100,13 @@ namespace ChatRoomServer.DomainLayer
             return false;
         }
 
-        public bool RecordMessageInChatRoom(Guid chatRoomId, ServerUser serverUser, string message)
+        public bool RecordMessageInChatRoomConversation(Guid chatRoomId, string message)
         {
             ChatRoom selectedChatRoom = _allCreatedChatRooms.Where(a => a.ChatRoomId == chatRoomId).FirstOrDefault();
             if (selectedChatRoom != null)
             {
-                string userMessage = serverUser.Username + ": " + message;
-                selectedChatRoom.ConversationRecord += userMessage;
+                selectedChatRoom.ConversationRecord += CRLF+ message;
+                _chatRoomUpdateCallback(_allCreatedChatRooms);
                 return true;
             }
 
