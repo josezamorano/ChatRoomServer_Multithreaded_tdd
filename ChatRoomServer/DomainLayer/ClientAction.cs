@@ -55,7 +55,7 @@ namespace ChatRoomServer.DomainLayer
                 {
                     ClientInfo clientInfo = new ClientInfo()
                     {
-                        tcpClient = client,
+                        TcpClient = client,
                         Username = string.Empty,
                         ServerUserID = null
                     };
@@ -65,7 +65,6 @@ namespace ChatRoomServer.DomainLayer
             finally{ _semaphoreSlim2.Release(); }
             
         }
-
 
         public void ResolveCommunicationFromClient(TcpClient tcpClient, ServerActivityInfo serverActivityInfo)
         {              
@@ -91,7 +90,7 @@ namespace ChatRoomServer.DomainLayer
         {
             if (string.IsNullOrEmpty(message) || message.Contains(Notification.Exception))
             {
-                var disconnectedClient = _allConnectedClients.Where(a => a.tcpClient == tcpClient).FirstOrDefault();
+                var disconnectedClient = _allConnectedClients.Where(a => a.TcpClient == tcpClient).FirstOrDefault();
                 CloseDisconnectedClient(disconnectedClient, serverActivityInfo);
                 return true;
             }
@@ -104,7 +103,7 @@ namespace ChatRoomServer.DomainLayer
         {
             if (disconnectedClient != null)
             {
-                disconnectedClient.tcpClient.Close();
+                disconnectedClient.TcpClient.Close();
                 _allConnectedClients.Remove(disconnectedClient);
 
                 var log = Notification.CRLF + "Client is disconnected";
@@ -114,18 +113,16 @@ namespace ChatRoomServer.DomainLayer
             serverActivityInfo.ConnectedClientsListCallback(_allConnectedClients);
         }
 
-
-
         private void ResolveActionRequestedByClient(string receivedMessage,  TcpClient tcpClient , ServerActivityInfo serverActivityInfo)
         {
             string payloadMessage = receivedMessage.Replace(Notification.ClientPayload, string.Empty);
             Payload payload = _serializationProvider.DeserializeObject<Payload>(payloadMessage);
-                       
+
             switch (payload.MessageActionType)
             {
                 case MessageActionType.ClientConnectToServer:
                 case MessageActionType.CreateUser:
-
+                {
                     ClientInfo duplicateServerUser = _allConnectedClients.Where(a => a.Username.ToLower() == payload.ClientUsername.ToLower()).FirstOrDefault();
                     if (duplicateServerUser != null)
                     {
@@ -141,50 +138,104 @@ namespace ChatRoomServer.DomainLayer
                         };
                         UpdateClientInfo(tcpClient, serverUser);
                         string messageSent = _messageDispatcher.SendMessageUserActivated(_allConnectedClients, (Guid)serverUser.ServerUserID, payload.ClientUsername);
-                        VerifyIfMessageIsNullOrContainsException(messageSent,tcpClient,serverActivityInfo);
-                        
+                        VerifyIfMessageIsNullOrContainsException(messageSent, tcpClient, serverActivityInfo);
+
                         serverActivityInfo.ConnectedClientsListCallback(_allConnectedClients);
                     }
-                   
-                    break;
+                }
+                break;
 
                 case MessageActionType.ManagerCreateChatRoomAndSendInvites:
+                {
+                    ChatRoom newChatRoomCreated = ResolveCreateChatRoom(payload.ChatRoomCreated);// _chatRoomManager.CreateChatRoom(payload.ChatRoomCreated);
+                    _chatRoomManager.AddChatRoomToAllChatRooms(newChatRoomCreated);
+                    SendChatRoomInviteToGuestUsers(newChatRoomCreated, tcpClient, serverActivityInfo);
 
-                    var chatRoomCreated = _chatRoomManager.CreateChatRoom(payload.ChatRoomCreated);                   
-                    foreach (Invite inviteToGuest in chatRoomCreated.AllInvitesSentToGuestUsers)
+                    Guid serverUserId = (Guid)newChatRoomCreated.Creator.ServerUserID;
+                    SendCompleteChatRoomInfoToCreator(serverUserId, newChatRoomCreated, tcpClient, serverActivityInfo);
+                    serverActivityInfo.ConnectedClientsListCallback(_allConnectedClients);
+                }
+                break;
+
+                case MessageActionType.ClientSendMessageToChatRoom:
+                {
+                    string message = payload.MessageToChatRoom;
+                    ChatRoom selectedChatRoom = _chatRoomManager.GetAllCreatedChatRooms().Where(a => a.ChatRoomId == payload.ChatRoomCreated.ChatRoomId).FirstOrDefault();
+                    if(selectedChatRoom != null)
                     {
-                        ClientInfo clientInfo = _allConnectedClients.Where(a=>a.ServerUserID == inviteToGuest.GuestServerUser.ServerUserID).FirstOrDefault();
-                        if(clientInfo != null && clientInfo.tcpClient.Connected )
+                        foreach (var activeUser in selectedChatRoom.AllActiveUsersInChatRoom)
                         {
-                            string messageSent = _messageDispatcher.SendMessageInviteDispatchedToUser (_allConnectedClients, clientInfo, inviteToGuest);
-                            VerifyIfMessageIsNullOrContainsException(messageSent, tcpClient, serverActivityInfo);
+                            ClientInfo clientInfo = _allConnectedClients.Where(a=>a.ServerUserID == activeUser.ServerUserID).FirstOrDefault();
+                            if (clientInfo != null && clientInfo.TcpClient !=null) 
+                            {
+                               string messageSent = _messageDispatcher.SendMessageBroadcastMessageToChatRoomActiveUser(_allConnectedClients, clientInfo, selectedChatRoom, message);
+                                VerifyIfMessageIsNullOrContainsException(messageSent, tcpClient, serverActivityInfo);
+                            }
                         }
                     }
-                    //Send the updated chatRoom Information to the chatRoom creator
-                    if(payload.UserId == payload.ChatRoomCreated.Creator.ServerUserID)
-                    {
-                        ClientInfo chatRoomCreatorClientInfo = _allConnectedClients.Where(a => a.ServerUserID == payload.UserId).FirstOrDefault();
-                        if (chatRoomCreatorClientInfo != null)
-                        {
-                            string messageSent = _messageDispatcher.SendMessageChatRoomCreated(_allConnectedClients, chatRoomCreatorClientInfo, payload.ChatRoomCreated);
-                            VerifyIfMessageIsNullOrContainsException(messageSent, tcpClient, serverActivityInfo);
-                        }
-                    }                    
 
-                    break;
+                    serverActivityInfo.ConnectedClientsListCallback(_allConnectedClients);
+                }
+                break;
             }
         }
 
         
         private void UpdateClientInfo(TcpClient tcpClient, ServerUser serverUser)
         {
-            var selectedClientInfo = _allConnectedClients.Where(a => a.tcpClient == tcpClient).FirstOrDefault();
+            var selectedClientInfo = _allConnectedClients.Where(a => a.TcpClient == tcpClient).FirstOrDefault();
             if (selectedClientInfo != null)
             {
                 selectedClientInfo.ServerUserID = serverUser.ServerUserID;
                 selectedClientInfo.Username = serverUser.Username;
             }
         }
+        
+
+        private ChatRoom ResolveCreateChatRoom(ChatRoom chatRoom )
+        {
+            ChatRoom newChatRoomCreated = _chatRoomManager.CreateChatRoom(chatRoom);
+            ServerUser serverUserCreator = new ServerUser()
+            {
+                Username = chatRoom.Creator.Username,
+                ServerUserID = chatRoom.Creator.ServerUserID
+            };
+            ServerUser serverUserDuplicated = newChatRoomCreated.AllActiveUsersInChatRoom.Where(a => a.ServerUserID == serverUserCreator.ServerUserID).FirstOrDefault();
+            if (serverUserDuplicated == null)
+            {
+                newChatRoomCreated.AllActiveUsersInChatRoom.Add(serverUserCreator);
+            }
+            return newChatRoomCreated;
+        }
+        
+        private void SendChatRoomInviteToGuestUsers(ChatRoom chatRoom, TcpClient tcpClient, ServerActivityInfo serverActivityInfo)
+        {
+
+            foreach (Invite inviteToGuest in chatRoom.AllInvitesSentToGuestUsers)
+            {
+                ClientInfo clientInfo = _allConnectedClients.Where(a => a.ServerUserID == inviteToGuest.GuestServerUser.ServerUserID).FirstOrDefault();
+
+                if (clientInfo != null && clientInfo.TcpClient != null && clientInfo.TcpClient.Connected)
+                {
+                    string messageSent = _messageDispatcher.SendMessageInviteDispatchedToUser(_allConnectedClients, clientInfo, inviteToGuest);
+                    VerifyIfMessageIsNullOrContainsException(messageSent, tcpClient, serverActivityInfo);
+                }
+            }
+        }
+        
+        private void SendCompleteChatRoomInfoToCreator(Guid userId, ChatRoom chatRoomCreated, TcpClient tcpClient, ServerActivityInfo serverActivityInfo)
+        {
+            if (userId == chatRoomCreated.Creator.ServerUserID)
+            {
+                ClientInfo clientInfo = _allConnectedClients.Where(a => a.ServerUserID == userId).FirstOrDefault();
+                if (clientInfo != null)
+                {
+                    string messageSent = _messageDispatcher.SendMessageChatRoomCreated(_allConnectedClients, clientInfo, chatRoomCreated);
+                    VerifyIfMessageIsNullOrContainsException(messageSent, tcpClient, serverActivityInfo);
+                }
+            }
+        }
+
         #endregion Private Methods
 
     }

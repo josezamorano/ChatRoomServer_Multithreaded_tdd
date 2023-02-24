@@ -35,16 +35,32 @@ namespace ChatRoomServer.Services
             return createdPayload;
         }
 
-        public Payload CreatePayload(List<ClientInfo> allConnectedClients, MessageActionType messageActionType, ServerUser serverUser, Invite invite)
+        public Payload CreatePayload(List<ClientInfo> allConnectedClients, MessageActionType messageActionType, ServerUser targetServerUser, Invite invite)
         {
             List<ServerUser> allActiveServerUsers = CreateServerUsersFromAllConnectedClients(allConnectedClients);
             Payload createdPayload = new Payload()
             {
                 MessageActionType = messageActionType,
-                UserId = serverUser.ServerUserID,
-                ClientUsername = serverUser.Username,
+                UserId = targetServerUser.ServerUserID,
+                ClientUsername = targetServerUser.Username,
                 ActiveServerUsers = allActiveServerUsers,
                 InviteToGuestUser = invite
+            };
+
+            return createdPayload;
+        }
+
+        public Payload CreatePayload(List<ClientInfo> allConnectedClients, MessageActionType messageActionType, ServerUser targetServerUser, ChatRoom chatRoom,  string messageToChatRoom)
+        {
+            List<ServerUser> allActiveServerUsers = CreateServerUsersFromAllConnectedClients(allConnectedClients);
+            Payload createdPayload = new Payload()
+            {
+                MessageActionType = messageActionType,
+                UserId = targetServerUser.ServerUserID,
+                ClientUsername = targetServerUser.Username,
+                ActiveServerUsers = allActiveServerUsers,
+                ChatRoomCreated = chatRoom,
+                MessageToChatRoom = messageToChatRoom
             };
 
             return createdPayload;

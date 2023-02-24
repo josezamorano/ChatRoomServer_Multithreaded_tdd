@@ -13,7 +13,8 @@
         ServerInviteSent = 8,
         ServerUserAcceptInvite = 9,
         ServerUserDeclineInvite = 10,
-        BroadcastMessageToChatRoom = 11,
-        ServerStopped = 12
+        ClientSendMessageToChatRoom = 11,
+        ServerBroadcastMessageToChatRoom = 12,
+        ServerStopped = 13
     }
 }

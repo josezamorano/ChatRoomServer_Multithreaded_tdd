@@ -1,10 +1,9 @@
 ﻿using ChatRoomServer.DomainLayer.Models;
-using ChatRoomServer.Services;
 using ChatRoomServer.Utils.Enumerations;
 using ChatRoomServer.Utils.Interfaces;
 using System.Net.Sockets;
 
-namespace ChatRoomServer.DomainLayer
+namespace ChatRoomServer.Services
 {
     public class MessageDispatcher : IMessageDispatcher
     {
@@ -30,7 +29,7 @@ namespace ChatRoomServer.DomainLayer
             Payload payloadUsernameOk = _objectCreator.CreatePayload(allConnectedClients, MessageActionType.UserActivated, ServerUserID, username);
             foreach (ClientInfo clientInfo in allConnectedClients)
             {
-                string messageSent = SendMessage(clientInfo.tcpClient, payloadUsernameOk);
+                string messageSent = SendMessage(clientInfo.TcpClient, payloadUsernameOk);
             }
             return Notification.MessageSentOk;
         }
@@ -42,11 +41,11 @@ namespace ChatRoomServer.DomainLayer
             return messageSent;
         }
 
-        public string SendMessageInviteDispatchedToUser(List<ClientInfo> allConnectedClients,ClientInfo clientInfo, Invite invite)
+        public string SendMessageInviteDispatchedToUser(List<ClientInfo> allConnectedClients, ClientInfo clientInfo, Invite invite)
         {
-            ServerUser targetServerUser = new ServerUser() { ServerUserID = clientInfo.ServerUserID, Username = clientInfo.Username};
+            ServerUser targetServerUser = new ServerUser() { ServerUserID = clientInfo.ServerUserID, Username = clientInfo.Username };
             Payload payloadChatRoomCreated = _objectCreator.CreatePayload(allConnectedClients, MessageActionType.ServerInviteSent, targetServerUser, invite);
-            string messageSent = SendMessage(clientInfo.tcpClient, payloadChatRoomCreated);
+            string messageSent = SendMessage(clientInfo.TcpClient, payloadChatRoomCreated);
             return messageSent;
         }
 
@@ -54,7 +53,15 @@ namespace ChatRoomServer.DomainLayer
         {
             ServerUser targetServerUser = new ServerUser() { ServerUserID = clientInfo.ServerUserID, Username = clientInfo.Username };
             Payload payloadChatRoomCreated = _objectCreator.CreatePayload(allConnectedClients, MessageActionType.ServerChatRoomCreated, targetServerUser, chatRoom);
-            string messageSent = SendMessage(clientInfo.tcpClient, payloadChatRoomCreated);
+            string messageSent = SendMessage(clientInfo.TcpClient, payloadChatRoomCreated);
+            return messageSent;
+        }
+
+        public string SendMessageBroadcastMessageToChatRoomActiveUser(List<ClientInfo> allConnectedClients, ClientInfo clientInfo, ChatRoom chatRoom, string messageToChatRoom)
+        {
+            ServerUser targetServerUser = new ServerUser() { ServerUserID = clientInfo.ServerUserID, Username = clientInfo.Username };
+            Payload payloadMessageToActiveUser = _objectCreator.CreatePayload(allConnectedClients, MessageActionType.ServerBroadcastMessageToChatRoom, targetServerUser,chatRoom ,messageToChatRoom);
+            string messageSent = SendMessage(clientInfo.TcpClient,payloadMessageToActiveUser);
             return messageSent;
         }
 

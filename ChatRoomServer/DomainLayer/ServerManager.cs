@@ -31,7 +31,7 @@ namespace ChatRoomServer.DomainLayer
 
             ClientInfo clientInfoTest = new ClientInfo()
             {
-                tcpClient = null,
+                TcpClient = null,
                 Username = "abc",
                 ServerUserID = Guid.NewGuid(),
             };
@@ -91,8 +91,8 @@ namespace ChatRoomServer.DomainLayer
                 foreach (ClientInfo clientInfo in _allConnectedClients)
                 {
                     Guid serverUserId = (Guid)clientInfo.ServerUserID;
-                    string messageSent = _messageDispatcher.SendMessageServerStopping(_allConnectedClients ,clientInfo.tcpClient, serverUserId, clientInfo.Username);
-                    clientInfo?.tcpClient?.Close();
+                    string messageSent = _messageDispatcher.SendMessageServerStopping(_allConnectedClients ,clientInfo.TcpClient, serverUserId, clientInfo.Username);
+                    clientInfo?.TcpClient?.Close();
                 }
                
                 _tcpListener.Stop();

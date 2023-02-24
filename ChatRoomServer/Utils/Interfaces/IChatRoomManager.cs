@@ -5,6 +5,7 @@ namespace ChatRoomServer.Utils.Interfaces
 {
     public interface IChatRoomManager
     {
+        void SetChatRoomUpdateCallback(ChatRoomsUpdateDelegate chatRoomUpdateCallback);
 
         ChatRoom CreateChatRoom(ChatRoom chatRoomFromServerUser);
 

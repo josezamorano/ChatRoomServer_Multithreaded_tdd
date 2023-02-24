@@ -6,6 +6,8 @@ namespace ChatRoomServer.DomainLayer
 {
     public class ChatRoomManager : IChatRoomManager
     {
+
+        private ChatRoomsUpdateDelegate _chatRoomUpdateCallback;
         private List<ChatRoom> _allCreatedChatRooms;
 
         IObjectCreator _objectCreator;
@@ -16,17 +18,29 @@ namespace ChatRoomServer.DomainLayer
 
         }
 
+        public void SetChatRoomUpdateCallback(ChatRoomsUpdateDelegate chatRoomUpdateCallback)
+        {
+            _chatRoomUpdateCallback = chatRoomUpdateCallback;
+        }
+
+
         public ChatRoom CreateChatRoom(ChatRoom chatRoomFromServerUser)
         {
             ChatRoom chatRoomCreated = _objectCreator.CreateChatRoom(chatRoomFromServerUser.ChatRoomName, chatRoomFromServerUser.Creator, chatRoomFromServerUser.AllActiveUsersInChatRoom, chatRoomFromServerUser.AllInvitesSentToGuestUsers);
-            AddChatRoomToAllChatRooms(chatRoomCreated);
 
             return chatRoomCreated;
         }
 
         public void AddChatRoomToAllChatRooms( ChatRoom chatRoom)
         {
-            _allCreatedChatRooms.Add(chatRoom);
+            var existingChatRoom = _allCreatedChatRooms.Where(a=>a.ChatRoomId == chatRoom.ChatRoomId).FirstOrDefault();
+            if (existingChatRoom == null) 
+            {
+                _allCreatedChatRooms.Add(chatRoom);
+
+                _chatRoomUpdateCallback(_allCreatedChatRooms);
+            }
+            
         }
 
         public List<ChatRoom> GetAllCreatedChatRooms()

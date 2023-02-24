@@ -5,7 +5,7 @@ namespace ChatRoomServer.DomainLayer.Models
     public class ClientInfo
     {
 
-        public TcpClient tcpClient { get; set; }
+        public TcpClient TcpClient { get; set; }
 
         public Guid? ServerUserID { get; set; }
 

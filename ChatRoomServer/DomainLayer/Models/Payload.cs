@@ -16,5 +16,7 @@ namespace ChatRoomServer.DomainLayer.Models
         public ChatRoom ChatRoomCreated { get; set; }
 
         public Invite InviteToGuestUser { get; set; }
+
+        public string MessageToChatRoom { get; set; }
     }
 }
