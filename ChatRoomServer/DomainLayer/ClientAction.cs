@@ -178,6 +178,28 @@ namespace ChatRoomServer.DomainLayer
                     serverActivityInfo.ConnectedClientsListCallback(_allConnectedClients);
                 }
                 break;
+
+                case MessageActionType.ServerUserAcceptInvite:
+                {
+                    var chatRoomId = payload.ChatRoomCreated?.ChatRoomId;
+                    var inviteId = payload.InviteToGuestUser?.InviteId;
+                    var targetChatRoom = _chatRoomManager.GetAllCreatedChatRooms().Where(a => a.ChatRoomId == chatRoomId).FirstOrDefault();
+                    if(targetChatRoom != null) 
+                    {
+                        var targetInvite = targetChatRoom.AllInvitesSentToGuestUsers.Where(b=>b.InviteId == inviteId ).FirstOrDefault();
+                        if (targetInvite != null) 
+                        {
+                            targetInvite.InviteStatus = InviteStatus.Accepted;
+                        }
+                        targetChatRoom.AllActiveUsersInChatRoom.Add(targetInvite.GuestServerUser);
+                    }
+
+                    //find chatroom, and accept invite, add active user to chartoom and 
+                    //update status of invites list.
+                    //Send message to client that accepted invite has been recorded
+
+                }
+                break;
             }
         }
 
