@@ -48,7 +48,20 @@ namespace ChatRoomServer.DomainLayer
             return _allCreatedChatRooms;
         }
 
-        public bool UpdateChatRoomStatus(Guid chatRoomId , ChatRoomStatus chatRoomStatus)
+        public bool UpdateChatRoomInformation(Guid chatRoomId, ChatRoomStatus chatRoomStatus,Guid inviteId, InviteStatus inviteStatus )
+        {
+            ChatRoom chatRoomForUpdate = _allCreatedChatRooms.Where(a => a.ChatRoomId == chatRoomId).FirstOrDefault();
+            if (chatRoomForUpdate == null) { return false; }
+
+            chatRoomForUpdate.ChatRoomStatus = chatRoomStatus;
+
+            return true;
+        }
+
+
+
+
+        public bool UpdateChatRoomStatus(Guid chatRoomId, ChatRoomStatus chatRoomStatus)
         {
             ChatRoom chatRoomForUpdate = _allCreatedChatRooms.Where(a => a.ChatRoomId == chatRoomId).FirstOrDefault();
             if (chatRoomForUpdate != null)
@@ -60,45 +73,79 @@ namespace ChatRoomServer.DomainLayer
             return false;
         }
 
-        public bool AddActiveUserToChatRoom(Guid chatRoomId, ServerUser serverUser)
+        public bool UpdateInvitedGuestServerUserInChatRoom(Guid chatRoomId, InviteStatus inviteStatus, ServerUser serverUser)
         {
-            var selectedChatRoom = _allCreatedChatRooms.Where(a=>a.ChatRoomId == chatRoomId).FirstOrDefault();
-            if (selectedChatRoom != null) 
-            { 
-                selectedChatRoom.AllActiveUsersInChatRoom.Add(serverUser);
-                return true;
-            }
+            bool chatRoomIsUpdated = false;
+            ChatRoom chatRoomForUpdate = _allCreatedChatRooms.Where(a => a.ChatRoomId == chatRoomId).FirstOrDefault();
+            if (chatRoomForUpdate == null) { return chatRoomIsUpdated; }
 
-            return false;
-        }
+            Invite targetInfiveInfo = chatRoomForUpdate.AllInvitesSentToGuestUsers.Where(a=>a.GuestServerUser.ServerUserID == serverUser.ServerUserID).FirstOrDefault();
+            if (targetInfiveInfo == null) { return chatRoomIsUpdated; }
+            targetInfiveInfo.InviteStatus = inviteStatus;
 
-        public bool RemoveUserFromChatRoom(Guid chatRoomId, ServerUser serverUser)
-        {
-            var selectedChatRoom = _allCreatedChatRooms.Where(a => a.ChatRoomId == chatRoomId).FirstOrDefault();
-            if (selectedChatRoom != null)
+            var targetGuestServerUser = chatRoomForUpdate.AllActiveUsersInChatRoom.Where(a => a.ServerUserID == serverUser.ServerUserID).FirstOrDefault();           
+            switch (inviteStatus)
             {
-                selectedChatRoom.AllActiveUsersInChatRoom.Remove(serverUser);
-                return true;
-            }
+                case InviteStatus.Accepted:
+                    if(targetGuestServerUser == null)
+                    {
+                        chatRoomForUpdate.AllActiveUsersInChatRoom.Add(serverUser);
+                        chatRoomIsUpdated = true;
+                    }
+                    break;
 
-            return false;
+                    case InviteStatus.Rejected:
+                    if(targetGuestServerUser != null)
+                    {
+                        chatRoomForUpdate.AllActiveUsersInChatRoom.Remove(serverUser);
+                        chatRoomIsUpdated = true;
+                    }
+                    break;
+            }
+            _chatRoomUpdateCallback(_allCreatedChatRooms);
+
+            return true;
         }
 
-        public bool UpdateInviteStatusInChatRoom(Guid chatRoomId, Guid inviteId, InviteStatus inviteStatus)
-        {
-            ChatRoom selectedChatRoom = _allCreatedChatRooms.Where(a =>a.ChatRoomId == chatRoomId).FirstOrDefault();
-            if (selectedChatRoom != null)
-            {
-                Invite selectedInvite = selectedChatRoom.AllInvitesSentToGuestUsers.Where(a => a.InviteId == inviteId).FirstOrDefault(); ;
-                if(selectedInvite != null) 
-                {
-                    selectedInvite.InviteStatus = inviteStatus;
-                    return true;
-                }
-            }
+        //public bool AddActiveUserToChatRoom(Guid chatRoomId, ServerUser serverUser)
+        //{
+        //    var selectedChatRoom = _allCreatedChatRooms.Where(a=>a.ChatRoomId == chatRoomId).FirstOrDefault();
+        //    if (selectedChatRoom != null) 
+        //    { 
+        //        selectedChatRoom.AllActiveUsersInChatRoom.Add(serverUser);
+        //        return true;
+        //    }
 
-            return false;
-        }
+        //    return false;
+        //}
+
+        //public bool RemoveUserFromChatRoom(Guid chatRoomId, ServerUser serverUser)
+        //{
+        //    var selectedChatRoom = _allCreatedChatRooms.Where(a => a.ChatRoomId == chatRoomId).FirstOrDefault();
+        //    if (selectedChatRoom != null)
+        //    {
+        //        selectedChatRoom.AllActiveUsersInChatRoom.Remove(serverUser);
+        //        return true;
+        //    }
+
+        //    return false;
+        //}
+
+        //public bool UpdateInviteStatusInChatRoom(Guid chatRoomId, Guid inviteId, InviteStatus inviteStatus)
+        //{
+        //    ChatRoom selectedChatRoom = _allCreatedChatRooms.Where(a =>a.ChatRoomId == chatRoomId).FirstOrDefault();
+        //    if (selectedChatRoom != null)
+        //    {
+        //        Invite selectedInvite = selectedChatRoom.AllInvitesSentToGuestUsers.Where(a => a.InviteId == inviteId).FirstOrDefault(); ;
+        //        if(selectedInvite != null) 
+        //        {
+        //            selectedInvite.InviteStatus = inviteStatus;
+        //            return true;
+        //        }
+        //    }
+
+        //    return false;
+        //}
 
         public bool RecordMessageInChatRoomConversation(Guid chatRoomId, string message)
         {

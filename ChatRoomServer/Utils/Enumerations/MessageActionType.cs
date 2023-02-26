@@ -12,7 +12,7 @@
         ServerChatRoomCreated = 7,
         ServerInviteSent = 8,
         ServerUserAcceptInvite = 9,
-        ServerUserDeclineInvite = 10,
+        ServerUserRejectInvite = 10,
         ClientSendMessageToChatRoom = 11,
         ServerBroadcastMessageToChatRoom = 12,
         ServerStopped = 13

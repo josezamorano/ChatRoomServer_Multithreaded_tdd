@@ -66,6 +66,22 @@ namespace ChatRoomServer.Services
             return createdPayload;
         }
 
+        public Payload CreatePayload(List<ClientInfo> allConnectedClients, MessageActionType messageActionType, ServerUser targetServerUser, ChatRoom chatRoom, Invite invite)
+        {
+            List<ServerUser> allActiveServerUsers = CreateServerUsersFromAllConnectedClients(allConnectedClients);
+            Payload createdPayload = new Payload()
+            {
+                MessageActionType = messageActionType,
+                UserId = targetServerUser.ServerUserID,
+                ClientUsername = targetServerUser.Username,
+                ActiveServerUsers = allActiveServerUsers,
+                ChatRoomCreated = chatRoom,
+                InviteToGuestUser = invite
+            };
+
+            return createdPayload;
+        }
+
 
         public ChatRoom CreateChatRoom(string chatRoomName, ServerUser serverUserCreator, List<ServerUser> allActiveUsersInChatRoom, List<Invite> allInvitesSentToGuestUsers)
         {
@@ -86,7 +102,7 @@ namespace ChatRoomServer.Services
             foreach (Invite inviteToGuest in chatRoomCreated.AllInvitesSentToGuestUsers)
             {
                 inviteToGuest.InviteId = Guid.NewGuid();
-                inviteToGuest.InviteStatus = InviteStatus.SentPendingResponse;
+                inviteToGuest.InviteStatus = InviteStatus.SentAndPendingResponse;
                 inviteToGuest.ChatRoomId = newId;
             }
 

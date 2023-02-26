@@ -181,29 +181,93 @@ namespace ChatRoomServer.DomainLayer
 
                 case MessageActionType.ServerUserAcceptInvite:
                 {
-                    var chatRoomId = payload.ChatRoomCreated?.ChatRoomId;
-                    var inviteId = payload.InviteToGuestUser?.InviteId;
-                    var targetChatRoom = _chatRoomManager.GetAllCreatedChatRooms().Where(a => a.ChatRoomId == chatRoomId).FirstOrDefault();
-                    if(targetChatRoom != null) 
+                    Guid chatRoomId = (Guid)payload.ChatRoomCreated?.ChatRoomId;
+                    Guid inviteId = (Guid)payload.InviteToGuestUser?.InviteId;
+                    Invite inviteReceivedFromGuest = payload.InviteToGuestUser;
+                    ChatRoom targetChatRoom = _chatRoomManager.GetAllCreatedChatRooms().Where(a => a.ChatRoomId == chatRoomId).FirstOrDefault();
+                    if(targetChatRoom == null || targetChatRoom.ChatRoomStatus == ChatRoomStatus.Closed)
                     {
-                        var targetInvite = targetChatRoom.AllInvitesSentToGuestUsers.Where(b=>b.InviteId == inviteId ).FirstOrDefault();
-                        if (targetInvite != null) 
-                        {
-                            targetInvite.InviteStatus = InviteStatus.Accepted;
-                        }
-                        targetChatRoom.AllActiveUsersInChatRoom.Add(targetInvite.GuestServerUser);
+                            //PENDING TO DO
+                            //notify original Client that chatRoom is closed and eliminate invite.
+                            return;
+                    }                        
+                       
+                    Invite targetInvite = targetChatRoom.AllInvitesSentToGuestUsers.Where(b=>b.InviteId == inviteId ).FirstOrDefault();
+                    if (targetInvite == null) 
+                    {
+                            //PENDING TO DO
+                            //notify original client that invite does not exist in chatroom so it has not
+                            //approval to access chatRoom and eliminate invite
+                            return;
                     }
+                    ServerUser guestServerUser = inviteReceivedFromGuest.GuestServerUser;
+                    _chatRoomManager.UpdateInvitedGuestServerUserInChatRoom(chatRoomId, InviteStatus.Accepted, guestServerUser);
 
-                    //find chatroom, and accept invite, add active user to chartoom and 
-                    //update status of invites list.
-                    //Send message to client that accepted invite has been recorded
-
+                    ResolveSendMessageToAllActiveUserInChatRoom(chatRoomId, inviteReceivedFromGuest, tcpClient, serverActivityInfo);
                 }
+                break;
+
+                case MessageActionType.ServerUserRejectInvite:
+                {
+                    Guid chatRoomId = (Guid)payload.ChatRoomCreated?.ChatRoomId;
+                    Guid inviteId = (Guid)payload.InviteToGuestUser?.InviteId;
+                    Invite inviteReceivedFromGuest = payload.InviteToGuestUser;
+                        ChatRoom targetChatRoom = _chatRoomManager.GetAllCreatedChatRooms().Where(a => a.ChatRoomId == chatRoomId).FirstOrDefault();
+                        if (targetChatRoom == null || targetChatRoom.ChatRoomStatus == ChatRoomStatus.Closed)
+                        {
+                            //PENDING TO DO
+                            //notify original Client that chatRoom is closed and eliminate invite.
+                            return;
+                        }
+
+                        Invite targetInvite = targetChatRoom.AllInvitesSentToGuestUsers.Where(b => b.InviteId == inviteId).FirstOrDefault();
+                        if (targetInvite == null)
+                        {
+                            //PENDING TO DO
+                            //notify original client that invite does not exist in chatroom so it has not
+                            //approval to access chatRoom and eliminate invite
+                            return;
+                        }
+                        ServerUser guestServerUser = inviteReceivedFromGuest.GuestServerUser;
+                        _chatRoomManager.UpdateInvitedGuestServerUserInChatRoom(chatRoomId, InviteStatus.Accepted, guestServerUser);
+
+                        ClientInfo targetClient = _allConnectedClients.Where(a => a.ServerUserID == guestServerUser.ServerUserID).FirstOrDefault();
+                        if (targetClient == null || !targetClient.TcpClient.Connected) { break; }
+                        //send message to REMOVE INVITE
+
+
+
+                    }
                 break;
             }
         }
 
-        
+
+
+        private void ResolveSendMessageToAllActiveUserInChatRoom(Guid targetChatRoomId, Invite inviteReceivedFromGuest, TcpClient tcpClient,ServerActivityInfo serverActivityInfo ) 
+        {
+            ChatRoom updatedChatRoom = _chatRoomManager.GetAllCreatedChatRooms().Where(a => a.ChatRoomId == targetChatRoomId).FirstOrDefault();
+            foreach (var guestUser in updatedChatRoom.AllActiveUsersInChatRoom)
+            {
+                string messageSent = string.Empty;
+                ClientInfo targetClient = _allConnectedClients.Where(a => a.ServerUserID == guestUser.ServerUserID).FirstOrDefault();
+                if (targetClient == null || !targetClient.TcpClient.Connected) { continue; }
+
+                if (targetClient.ServerUserID == inviteReceivedFromGuest.GuestServerUser.ServerUserID)
+                {
+                    messageSent = _messageDispatcher.SendMessageServerUserChatRoomUpdatedAndInviteAccepted(_allConnectedClients, targetClient, updatedChatRoom, inviteReceivedFromGuest);
+                }
+                else
+                {
+                    messageSent = _messageDispatcher.SendMessageServerUserChatRoomUpdatedAndInviteAccepted(_allConnectedClients, targetClient, updatedChatRoom, null);
+                }               
+
+                VerifyIfMessageIsNullOrContainsException(messageSent, tcpClient, serverActivityInfo);
+
+            }
+        }
+
+
         private void UpdateClientInfo(TcpClient tcpClient, ServerUser serverUser)
         {
             var selectedClientInfo = _allConnectedClients.Where(a => a.TcpClient == tcpClient).FirstOrDefault();

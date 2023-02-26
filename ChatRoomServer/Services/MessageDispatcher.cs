@@ -65,6 +65,14 @@ namespace ChatRoomServer.Services
             return messageSent;
         }
 
+        public string SendMessageServerUserChatRoomUpdatedAndInviteAccepted(List<ClientInfo> allConnectedClients,ClientInfo clientInfo ,ChatRoom chatRoom , Invite invite)
+        {
+            ServerUser targetServerUser = new ServerUser() { ServerUserID = clientInfo.ServerUserID, Username = clientInfo.Username };
+            Payload payloadInviteAccepted = _objectCreator.CreatePayload(allConnectedClients, MessageActionType.ServerUserAcceptInvite, targetServerUser, chatRoom , invite);
+            string messageSent = SendMessage(clientInfo.TcpClient, payloadInviteAccepted);
+            return messageSent;
+        }
+
         #region Private Methods
         private string SendMessage(TcpClient tcpClient, Payload payload)
         {

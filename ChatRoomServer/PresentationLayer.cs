@@ -215,7 +215,7 @@ namespace ChatRoomServer
                 ChatRoomIdentifierNameId = "abc-111",
                 ChatRoomStatus = ChatRoomStatus.OpenActive,
                 AllActiveUsersInChatRoom = new List<ServerUser> { new ServerUser() { Username = "abc1" }, new ServerUser() { Username = "mno" } },
-                AllInvitesSentToGuestUsers = new List<Invite> { new Invite() { GuestServerUser = new ServerUser() { Username = "Mark" }, InviteStatus = InviteStatus.SentPendingResponse } }
+                AllInvitesSentToGuestUsers = new List<Invite> { new Invite() { GuestServerUser = new ServerUser() { Username = "Mark" }, InviteStatus = InviteStatus.SentAndPendingResponse } }
 
             };
             ChatRoom chatRoom3 = new ChatRoom()
@@ -223,7 +223,7 @@ namespace ChatRoomServer
                 ChatRoomIdentifierNameId = "abc-111",
                 ChatRoomStatus = ChatRoomStatus.OpenActive,
                 AllActiveUsersInChatRoom = new List<ServerUser> { new ServerUser() { Username = "abc2" }, new ServerUser() { Username = "mno" } },
-                AllInvitesSentToGuestUsers = new List<Invite> { new Invite() { GuestServerUser = new ServerUser() { Username = "Pam" }, InviteStatus = InviteStatus.SentPendingResponse }, }
+                AllInvitesSentToGuestUsers = new List<Invite> { new Invite() { GuestServerUser = new ServerUser() { Username = "Pam" }, InviteStatus = InviteStatus.SentAndPendingResponse }, }
 
             };
             ChatRoom chatRoom4 = new ChatRoom()
@@ -231,7 +231,7 @@ namespace ChatRoomServer
                 ChatRoomIdentifierNameId = "abc-111",
                 ChatRoomStatus = ChatRoomStatus.OpenActive,
                 AllActiveUsersInChatRoom = new List<ServerUser> { new ServerUser() { Username = "abc3" }, new ServerUser() { Username = "mno" } },
-                AllInvitesSentToGuestUsers = new List<Invite> { new Invite() { GuestServerUser = new ServerUser() { Username = "Jack" }, InviteStatus = InviteStatus.SentPendingResponse }, }
+                AllInvitesSentToGuestUsers = new List<Invite> { new Invite() { GuestServerUser = new ServerUser() { Username = "Jack" }, InviteStatus = InviteStatus.SentAndPendingResponse }, }
 
             };
             allChatRooms.Add(chatRoom1);

@@ -3,8 +3,8 @@
     public enum InviteStatus
     {
         CreatedNotSent = 1,
-        SentPendingResponse = 2,
+        SentAndPendingResponse = 2,
         Accepted = 3,
-        Declined = 4
+        Rejected = 4
     }
 }
