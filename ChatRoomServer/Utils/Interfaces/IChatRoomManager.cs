@@ -17,6 +17,10 @@ namespace ChatRoomServer.Utils.Interfaces
 
         bool UpdateInvitedGuestServerUserInChatRoom(Guid chatRoomId, InviteStatus inviteStatus, ServerUser serverUser);
 
-        bool RecordMessageInChatRoomConversation(Guid chatRoomId, string message);
+        bool RemoveUserFromAllActiveUsersInChatRoom(Guid targetChatRoomId, Guid serverUserId);
+
+        bool RemoveUserFromAllChatRooms(Guid serverUserId);
+
+        bool RecordMessageInChatRoomConversation(Guid chatRoomId, string message);       
     }
 }

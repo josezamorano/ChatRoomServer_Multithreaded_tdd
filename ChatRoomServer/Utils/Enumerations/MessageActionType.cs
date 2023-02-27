@@ -15,6 +15,11 @@
         ServerUserRejectInvite = 10,
         ClientSendMessageToChatRoom = 11,
         ServerBroadcastMessageToChatRoom = 12,
-        ServerStopped = 13
+        ClientExitChatRoom = 13,
+        ServerExitChatRoomAccepted = 14,
+        ServerStopped = 15,
+        ClientDisconnect = 16,
+        ServerClientDisconnectAccepted = 17,
+        ServerUserIsDisconnected = 18
     }
 }

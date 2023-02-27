@@ -9,6 +9,8 @@ namespace ChatRoomServer.Utils.Interfaces
     {
         Payload CreatePayload(List<ClientInfo> allConnectedClients, MessageActionType messageActionType, Guid? userId, string username);
 
+        Payload CreatePayload(List<ClientInfo> allConnectedClients, MessageActionType messageActionType, ServerUser activeServerUser, ServerUser serverUserDisconnecte);
+
         Payload CreatePayload(List<ClientInfo> allConnectedClients, MessageActionType messageActionType, ServerUser serverUser, ChatRoom chatRoom);
 
         Payload CreatePayload(List<ClientInfo> allConnectedClients, MessageActionType messageActionType, ServerUser serverUser, Invite invite);

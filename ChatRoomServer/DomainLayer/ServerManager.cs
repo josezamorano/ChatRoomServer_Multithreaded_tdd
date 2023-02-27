@@ -91,7 +91,7 @@ namespace ChatRoomServer.DomainLayer
                 foreach (ClientInfo clientInfo in _allConnectedClients)
                 {
                     Guid serverUserId = (Guid)clientInfo.ServerUserID;
-                    string messageSent = _messageDispatcher.SendMessageServerStopping(_allConnectedClients ,clientInfo.TcpClient, serverUserId, clientInfo.Username);
+                    string messageSent = _messageDispatcher.SendMessageServerStopping(_allConnectedClients ,clientInfo );
                     clientInfo?.TcpClient?.Close();
                 }
                

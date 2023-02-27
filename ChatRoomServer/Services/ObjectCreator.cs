@@ -20,6 +20,22 @@ namespace ChatRoomServer.Services
             return createdPayload;
         }
 
+        public Payload CreatePayload(List<ClientInfo> allConnectedClients, MessageActionType messageActionType, ServerUser activeServerUser, ServerUser serverUserDisconnecte)
+        {
+            List<ServerUser> allActiveServerUsers = CreateServerUsersFromAllConnectedClients(allConnectedClients);
+            Payload createdPayload = new Payload()
+            {
+                MessageActionType = messageActionType,
+                UserId = activeServerUser.ServerUserID,
+                ClientUsername = activeServerUser.Username,
+                ActiveServerUsers = allActiveServerUsers,
+                ServerUserDisconnected = serverUserDisconnecte
+            };
+
+            return createdPayload;
+        }
+
+
         public Payload CreatePayload(List<ClientInfo> allConnectedClients, MessageActionType messageActionType, ServerUser serverUser, ChatRoom chatRoom)
         {
             List<ServerUser> allActiveServerUsers = CreateServerUsersFromAllConnectedClients(allConnectedClients);

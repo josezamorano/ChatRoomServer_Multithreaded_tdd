@@ -3,6 +3,9 @@ using ChatRoomServer.Utils.Enumerations;
 using ChatRoomServer.Utils.Interfaces;
 using System.Net.Sockets;
 
+
+
+
 namespace ChatRoomServer.Services
 {
     public class MessageDispatcher : IMessageDispatcher
@@ -17,13 +20,26 @@ namespace ChatRoomServer.Services
             _transmitter = transmitter;
         }
 
-        public string SendMessageServerStopping(List<ClientInfo> allConnectedClients, TcpClient tcpClient, Guid serverUserId, string username)
-        {
-            Payload payloadUsernameError = _objectCreator.CreatePayload(allConnectedClients, MessageActionType.ServerStopped, serverUserId, username);
-            string messageSent = SendMessage(tcpClient, payloadUsernameError);
+        public string SendMessageServerStopping(List<ClientInfo> allConnectedClients, ClientInfo clientInfo)
+        {          
+            string messageSent = ResolveMessageToClient(MessageActionType.ServerStopped, allConnectedClients, clientInfo);
             return messageSent;
         }
 
+        public string SendMessageClientDisconnectionAccepted(List<ClientInfo> allConnectedClients, ClientInfo clientInfo)
+        {
+            string messageSent = ResolveMessageToClient(MessageActionType.ServerClientDisconnectAccepted,allConnectedClients, clientInfo);
+            return messageSent;
+        }
+
+        public string SendMessageServerUserIsDisconnected(List<ClientInfo> allConnectedClients, ClientInfo clientInfo , ServerUser serverUserDisconnected)
+        {
+            ServerUser activeServerUser = new ServerUser() { ServerUserID = clientInfo.ServerUserID, Username = clientInfo.Username };
+            Payload payloadUserIsDisconnected = _objectCreator.CreatePayload(allConnectedClients, MessageActionType.ServerUserIsDisconnected, activeServerUser, serverUserDisconnected);
+            string messageSent = SendMessage(clientInfo.TcpClient, payloadUserIsDisconnected);
+            return messageSent;
+        }
+                
         public string SendMessageUserActivated(List<ClientInfo> allConnectedClients, Guid ServerUserID, string username)
         {
             Payload payloadUsernameOk = _objectCreator.CreatePayload(allConnectedClients, MessageActionType.UserActivated, ServerUserID, username);
@@ -51,10 +67,14 @@ namespace ChatRoomServer.Services
 
         public string SendMessageChatRoomCreated(List<ClientInfo> allConnectedClients, ClientInfo clientInfo, ChatRoom chatRoom)
         {
-            ServerUser targetServerUser = new ServerUser() { ServerUserID = clientInfo.ServerUserID, Username = clientInfo.Username };
-            Payload payloadChatRoomCreated = _objectCreator.CreatePayload(allConnectedClients, MessageActionType.ServerChatRoomCreated, targetServerUser, chatRoom);
-            string messageSent = SendMessage(clientInfo.TcpClient, payloadChatRoomCreated);
+            string messageSent = ResolveMessageChatRoomStatus(MessageActionType.ServerChatRoomCreated, allConnectedClients, clientInfo, chatRoom);
             return messageSent;
+        }
+
+        public string SendMessageServerUserExitedChatRoom(List<ClientInfo> allConnectedClients, ClientInfo clientInfo, ChatRoom chatRoom)
+        {
+            string message = ResolveMessageChatRoomStatus(MessageActionType.ServerExitChatRoomAccepted, allConnectedClients, clientInfo, chatRoom);
+            return message;
         }
 
         public string SendMessageBroadcastMessageToChatRoomActiveUser(List<ClientInfo> allConnectedClients, ClientInfo clientInfo, ChatRoom chatRoom, string messageToChatRoom)
@@ -73,7 +93,32 @@ namespace ChatRoomServer.Services
             return messageSent;
         }
 
+
+        public string SendMessageServerUserChatRoomUpdatedAndInviteRejected(List<ClientInfo> allConnectedClients, ClientInfo clientInfo, Invite invite)
+        {
+            ServerUser targetServerUser = new ServerUser() { ServerUserID = clientInfo.ServerUserID, Username = clientInfo.Username };
+            Payload payloadInviteAccepted = _objectCreator.CreatePayload(allConnectedClients, MessageActionType.ServerUserRejectInvite, targetServerUser, invite);
+            string messageSent = SendMessage(clientInfo.TcpClient, payloadInviteAccepted);
+            return messageSent;
+        }
+
+
         #region Private Methods
+
+        private string ResolveMessageToClient(MessageActionType messageActionType, List<ClientInfo> allConnectedClients, ClientInfo clientInfo)
+        {
+            Payload payloadInfo = _objectCreator.CreatePayload(allConnectedClients, messageActionType, clientInfo.ServerUserID, clientInfo.Username);
+            string messageSent = SendMessage(clientInfo.TcpClient, payloadInfo);
+            return messageSent;
+        }
+
+        private string ResolveMessageChatRoomStatus(MessageActionType messageActionType, List<ClientInfo> allConnectedClients, ClientInfo clientInfo, ChatRoom chatRoom)
+        {
+            ServerUser targetServerUser = new ServerUser() { ServerUserID = clientInfo.ServerUserID, Username = clientInfo.Username };
+            Payload payloadChatRoomCreated = _objectCreator.CreatePayload(allConnectedClients, messageActionType, targetServerUser, chatRoom);
+            string messageSent = SendMessage(clientInfo.TcpClient, payloadChatRoomCreated);
+            return messageSent;
+        }
         private string SendMessage(TcpClient tcpClient, Payload payload)
         {
             string serializedObject = _serializationProvider.SerializeObject(payload);
