@@ -176,16 +176,16 @@ namespace ChatRoomServer.DomainLayer
                 case MessageActionType.ClientSendMessageToChatRoom:
                 {
                     string message = payload.MessageToChatRoom;
-                    ChatRoom selectedChatRoom = _chatRoomManager.GetAllCreatedChatRooms().Where(a => a.ChatRoomId == payload.ChatRoomCreated.ChatRoomId).FirstOrDefault();
-                    if(selectedChatRoom != null)
+                    ControlChatRoom selectedControlChatRoom = _chatRoomManager.GetAllCreatedChatRooms().Where(a => a.ChatRoomObject.ChatRoomId == payload.ChatRoomCreated.ChatRoomId).FirstOrDefault();
+                    if(selectedControlChatRoom != null)
                     {
-                        _chatRoomManager.RecordMessageInChatRoomConversation(selectedChatRoom.ChatRoomId, message);
-                        foreach (var activeUser in selectedChatRoom.AllActiveUsersInChatRoom)
+                        _chatRoomManager.RecordMessageInChatRoomConversation(selectedControlChatRoom.ChatRoomObject.ChatRoomId, message);
+                        foreach (ServerUser activeUser in selectedControlChatRoom.ChatRoomObject.AllActiveUsersInChatRoom)
                         {
                             ClientInfo clientInfo = _allConnectedClients.Where(a=>a.ServerUserID == activeUser.ServerUserID).FirstOrDefault();
                             if (clientInfo != null && clientInfo.TcpClient !=null) 
                             {
-                               string messageSent = _messageDispatcher.SendMessageBroadcastMessageToChatRoomActiveUser(_allConnectedClients, clientInfo, selectedChatRoom, message);
+                               string messageSent = _messageDispatcher.SendMessageBroadcastMessageToChatRoomActiveUser(_allConnectedClients, clientInfo, selectedControlChatRoom.ChatRoomObject, message);
                                 VerifyIfMessageIsNullOrContainsException(messageSent, tcpClient, serverActivityInfo);
                             }
                         }
@@ -200,8 +200,8 @@ namespace ChatRoomServer.DomainLayer
                     Guid chatRoomId = (Guid)payload.ChatRoomCreated?.ChatRoomId;
                     Invite inviteReceivedFromGuest = payload.InviteToGuestUser;
                     ServerUser guestServerUser = inviteReceivedFromGuest.GuestServerUser;
-                    ChatRoom targetChatRoom = _chatRoomManager.GetAllCreatedChatRooms().Where(a => a.ChatRoomId == chatRoomId).FirstOrDefault();
-                    if (targetChatRoom == null || targetChatRoom.ChatRoomStatus == ChatRoomStatus.Closed)
+                    ControlChatRoom targetControlChatRoom = _chatRoomManager.GetAllCreatedChatRooms().Where(a => a.ChatRoomObject.ChatRoomId == chatRoomId).FirstOrDefault();
+                    if (targetControlChatRoom == null || targetControlChatRoom.ChatRoomObject.ChatRoomStatus == ChatRoomStatus.Closed)
                     {
                         //notify original Client that chatRoom is closed and eliminate invite.
                         ResolveSendMessageServerUserInviteRejected(guestServerUser, inviteReceivedFromGuest, tcpClient, serverActivityInfo);
@@ -209,7 +209,7 @@ namespace ChatRoomServer.DomainLayer
                     }
 
                     Guid inviteId = (Guid)payload.InviteToGuestUser?.InviteId;
-                    Invite targetInvite = targetChatRoom.AllInvitesSentToGuestUsers.Where(b=>b.InviteId == inviteId ).FirstOrDefault();
+                    Invite targetInvite = targetControlChatRoom.ChatRoomObject.AllInvitesSentToGuestUsers.Where(b=>b.InviteId == inviteId ).FirstOrDefault();
                     if (targetInvite == null) 
                     {
                         //notify original client that invite does not exist in chatroom so it has not been approved to access chatRoom and eliminate invite
@@ -241,10 +241,10 @@ namespace ChatRoomServer.DomainLayer
                     _chatRoomManager.RemoveUserFromAllActiveUsersInChatRoom(payload.ChatRoomCreated.ChatRoomId, (Guid)payload.UserId);
                     ServerUser serverUserRemoved = new ServerUser() {ServerUserID = (Guid)payload.UserId,Username = payload.ClientUsername };
                     //If the chatRoom is still active, Notify the remaining users that one user exited the chatRoom 
-                    ChatRoom selectedChatRoom = _chatRoomManager.GetAllCreatedChatRooms().Where(a => a.ChatRoomId == payload.ChatRoomCreated.ChatRoomId && a.ChatRoomStatus == ChatRoomStatus.OpenActive).FirstOrDefault();
-                    if(selectedChatRoom !=null)
+                    ControlChatRoom selectedControlChatRoom = _chatRoomManager.GetAllCreatedChatRooms().Where(a => a.ChatRoomObject.ChatRoomId == payload.ChatRoomCreated.ChatRoomId && a.ChatRoomObject.ChatRoomStatus == ChatRoomStatus.OpenActive).FirstOrDefault();
+                    if(selectedControlChatRoom !=null)
                     {
-                        foreach (var serverUser in selectedChatRoom.AllActiveUsersInChatRoom)
+                        foreach (var serverUser in selectedControlChatRoom.ChatRoomObject.AllActiveUsersInChatRoom)
                         {
                             ClientInfo clientInfo = _allConnectedClients.Where(a => a.ServerUserID == serverUser.ServerUserID).FirstOrDefault();
                             if(clientInfo != null && clientInfo.TcpClient != null && clientInfo.TcpClient.Connected)
@@ -301,8 +301,8 @@ namespace ChatRoomServer.DomainLayer
 
         private void ResolveSendMessageToAllActiveUserInChatRoom(Guid targetChatRoomId, Invite inviteReceivedFromGuest, TcpClient tcpClient,ServerActivityInfo serverActivityInfo ) 
         {
-            ChatRoom updatedChatRoom = _chatRoomManager.GetAllCreatedChatRooms().Where(a => a.ChatRoomId == targetChatRoomId).FirstOrDefault();
-            foreach (var guestUser in updatedChatRoom.AllActiveUsersInChatRoom)
+            ControlChatRoom updatedControlChatRoom = _chatRoomManager.GetAllCreatedChatRooms().Where(a => a.ChatRoomObject.ChatRoomId == targetChatRoomId).FirstOrDefault();
+            foreach (var guestUser in updatedControlChatRoom.ChatRoomObject.AllActiveUsersInChatRoom)
             {
                 string messageSent = string.Empty;
                 ClientInfo targetClient = _allConnectedClients.Where(a => a.ServerUserID == guestUser.ServerUserID).FirstOrDefault();
@@ -310,11 +310,11 @@ namespace ChatRoomServer.DomainLayer
 
                 if (targetClient.ServerUserID == inviteReceivedFromGuest.GuestServerUser.ServerUserID)
                 {
-                    messageSent = _messageDispatcher.SendMessageServerUserChatRoomUpdatedAndInviteAccepted(_allConnectedClients, targetClient, updatedChatRoom, inviteReceivedFromGuest);
+                    messageSent = _messageDispatcher.SendMessageServerUserChatRoomUpdatedAndInviteAccepted(_allConnectedClients, targetClient, updatedControlChatRoom.ChatRoomObject, inviteReceivedFromGuest);
                 }
                 else
                 {
-                    messageSent = _messageDispatcher.SendMessageServerUserChatRoomUpdatedAndInviteAccepted(_allConnectedClients, targetClient, updatedChatRoom, null);
+                    messageSent = _messageDispatcher.SendMessageServerUserChatRoomUpdatedAndInviteAccepted(_allConnectedClients, targetClient, updatedControlChatRoom.ChatRoomObject, null);
                 }               
 
                 VerifyIfMessageIsNullOrContainsException(messageSent, tcpClient, serverActivityInfo);
