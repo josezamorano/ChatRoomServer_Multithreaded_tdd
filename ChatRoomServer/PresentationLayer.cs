@@ -150,7 +150,7 @@ namespace ChatRoomServer
         {
             Thread threadChatRoomUpdateEvent = new Thread(() =>
             {
-                if (allChatRooms.Count > 0)
+                if (allChatRooms.Count >= 0)
                 {
                     ResolveChatRoomDynamicControl(allChatRooms);
 
@@ -245,7 +245,7 @@ namespace ChatRoomServer
         {
             Action actionUpdate = () =>
             {
-                if (_tlpCanvas.Controls.Count > 0)
+                if (_tlpCanvas.Controls.Count >= 0)
                 {
                     _tlpCanvas.Controls.Clear();
                 }

@@ -67,6 +67,12 @@ namespace ChatRoomServer.DomainLayer
             return false;
         }
 
+        public void RemoveAllChatRooms()
+        {
+            _allCreatedChatRooms.Clear();
+            _chatRoomUpdateCallback(_allCreatedChatRooms);
+        }
+
         public bool UpdateInvitedGuestServerUserInChatRoom(Guid chatRoomId, InviteStatus inviteStatus, ServerUser serverUser)
         {
             bool chatRoomIsUpdated = false;
@@ -131,6 +137,10 @@ namespace ChatRoomServer.DomainLayer
                 if (userForRemoval != null) 
                 {
                     activeChatRoom.AllActiveUsersInChatRoom.Remove(userForRemoval);
+                    if(activeChatRoom.AllActiveUsersInChatRoom.Count <= 0)
+                    {
+                        activeChatRoom.ChatRoomStatus= ChatRoomStatus.Closed;
+                    }
                 }
             }
             _chatRoomUpdateCallback (_allCreatedChatRooms);

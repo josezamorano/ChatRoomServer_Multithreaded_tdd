@@ -13,6 +13,8 @@ namespace ChatRoomServer.Utils.Interfaces
 
         List<ChatRoom> GetAllCreatedChatRooms();
 
+        void RemoveAllChatRooms();
+
         bool UpdateChatRoomStatus(Guid chatRoomId, ChatRoomStatus chatRoomStatus);
 
         bool UpdateInvitedGuestServerUserInChatRoom(Guid chatRoomId, InviteStatus inviteStatus, ServerUser serverUser);

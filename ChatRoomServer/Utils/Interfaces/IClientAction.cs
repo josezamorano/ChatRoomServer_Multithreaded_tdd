@@ -12,5 +12,7 @@ namespace ChatRoomServer.Utils.Interfaces
         void AddNewClientConnectionToAllConnectedClients(TcpClient client);
 
         void ResolveCommunicationFromClient(TcpClient tcpClient, ServerActivityInfo serverActivityInfo);
+
+        void RemoveAllCreatedChatRooms();
     }
 }

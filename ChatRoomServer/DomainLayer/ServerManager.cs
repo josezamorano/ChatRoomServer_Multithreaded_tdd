@@ -94,7 +94,9 @@ namespace ChatRoomServer.DomainLayer
                     string messageSent = _messageDispatcher.SendMessageServerStopping(_allConnectedClients ,clientInfo );
                     clientInfo?.TcpClient?.Close();
                 }
-               
+                
+                _clientAction.RemoveAllCreatedChatRooms();
+
                 _tcpListener.Stop();
                 _allConnectedClients.Clear();
                 serverActivityInfo.ConnectedClientsCountCallback(_allConnectedClients.Count);

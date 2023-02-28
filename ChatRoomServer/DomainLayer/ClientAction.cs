@@ -84,17 +84,22 @@ namespace ChatRoomServer.DomainLayer
             _transmitter.ReceiveMessageFromClient(tcpClient, messageFromClientCallback);
         }
 
+        public void RemoveAllCreatedChatRooms()
+        {
+            _chatRoomManager.RemoveAllChatRooms();
+        }
+
         #region Private Methods 
 
         private bool VerifyIfMessageIsNullOrContainsException(string message, TcpClient tcpClient, ServerActivityInfo serverActivityInfo)
         {
+            serverActivityInfo.ServerLoggerCallback(message);
             if (string.IsNullOrEmpty(message) || message.Contains(Notification.Exception))
             {
-                var disconnectedClient = _allConnectedClients.Where(a => a.TcpClient == tcpClient).FirstOrDefault();
-                CloseDisconnectedClient(disconnectedClient, serverActivityInfo);
+                ClientInfo disconnectedClient = _allConnectedClients.Where(a => a.TcpClient == tcpClient).FirstOrDefault();
+                ResolveClientDisconnect(disconnectedClient, serverActivityInfo);
                 return true;
             }
-            serverActivityInfo.ServerLoggerCallback(message);
             return false;
         }
 
@@ -104,7 +109,11 @@ namespace ChatRoomServer.DomainLayer
             if (disconnectedClient != null)
             {
                 disconnectedClient.TcpClient.Close();
-                _allConnectedClients.Remove(disconnectedClient);
+                var clientForRemoval = _allConnectedClients.Where(a=>a.ServerUserID == disconnectedClient.ServerUserID).FirstOrDefault();
+                if (clientForRemoval != null) 
+                {
+                    _allConnectedClients.Remove(clientForRemoval);
+                }                
 
                 var log = Notification.CRLF + "Client is disconnected";
                 serverActivityInfo.ServerLoggerCallback(log);
@@ -146,23 +155,9 @@ namespace ChatRoomServer.DomainLayer
                 break;
 
                 case MessageActionType.ClientDisconnect:
-                {
-                    var serverUserRemoved = _chatRoomManager.RemoveUserFromAllChatRooms((Guid)payload.UserId);
-                    var clientForDisconnection = _allConnectedClients.Where(a=>a.ServerUserID == payload.UserId).FirstOrDefault();
-
-                    
-                    string messageSent = _messageDispatcher.SendMessageClientDisconnectionAccepted(_allConnectedClients, clientForDisconnection );
-                    VerifyIfMessageIsNullOrContainsException(messageSent, tcpClient, serverActivityInfo);
-                    CloseDisconnectedClient(clientForDisconnection, serverActivityInfo);
-
-                    //To all remaining active clients notify that client is disconnected and they need to remove it from their lists
-                    foreach(var clientInfo in _allConnectedClients)
-                    {
-                            if (clientInfo == null || !clientInfo.TcpClient.Connected) { continue; }
-                        messageSent = _messageDispatcher.SendMessageServerUserIsDisconnected(_allConnectedClients, clientInfo, payload.ServerUserDisconnected);
-                        VerifyIfMessageIsNullOrContainsException(messageSent, tcpClient, serverActivityInfo);
-                    }
-
+                {            
+                    ClientInfo clientForDisconnection = _allConnectedClients.Where(a=>a.ServerUserID == payload.UserId).FirstOrDefault();
+                    ResolveClientDisconnect(clientForDisconnection, serverActivityInfo);
                 }
                 break;
 
@@ -268,6 +263,24 @@ namespace ChatRoomServer.DomainLayer
             }
         }
 
+        private void ResolveClientDisconnect(ClientInfo clientInfoForDisconnection, ServerActivityInfo serverActivityInfo)
+        {
+            if (clientInfoForDisconnection == null || clientInfoForDisconnection.ServerUserID == null) { return; }
+            Guid userId = (Guid)clientInfoForDisconnection?.ServerUserID;
+            _chatRoomManager.RemoveUserFromAllChatRooms(userId);
+
+            _messageDispatcher.SendMessageClientDisconnectionAccepted(_allConnectedClients, clientInfoForDisconnection);
+            CloseDisconnectedClient(clientInfoForDisconnection, serverActivityInfo);
+
+            //To all remaining active clients notify that client is disconnected and they need to remove it from their lists
+            foreach (var clientInfo in _allConnectedClients)
+            {
+                if (clientInfo == null || clientInfo.TcpClient == null || !clientInfo.TcpClient.Connected) { continue; }
+                ServerUser serverUserDisconnected = new ServerUser() { ServerUserID = userId, Username = clientInfoForDisconnection.Username };
+                _messageDispatcher.SendMessageServerUserIsDisconnected(_allConnectedClients, clientInfo, serverUserDisconnected);
+            }
+        }
+
         private bool ResolveSendMessageServerUserInviteRejected(ServerUser guestServerUser, Invite inviteReceivedFromGuest, TcpClient tcpClient,ServerActivityInfo serverActivityInfo)
         {
             ClientInfo targetClient = _allConnectedClients.Where(a => a.ServerUserID == guestServerUser.ServerUserID).FirstOrDefault();
@@ -304,7 +317,6 @@ namespace ChatRoomServer.DomainLayer
                 }               
 
                 VerifyIfMessageIsNullOrContainsException(messageSent, tcpClient, serverActivityInfo);
-
             }
         }
 
