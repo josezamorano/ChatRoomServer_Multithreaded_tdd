@@ -19,7 +19,9 @@ namespace ChatRoomServer.Utils.Interfaces
 
         string SendMessageChatRoomCreated(List<ClientInfo> allConnectedClients, ClientInfo clientInfo, ChatRoom chatRoom);
 
-        string SendMessageServerUserExitedChatRoom(List<ClientInfo> allConnectedClients, ClientInfo clientInfo, ChatRoom chatRoom);
+        string SendMessageServerUserChatRoomExitAccepted(List<ClientInfo> allConnectedClients, ClientInfo clientInfo, ChatRoom chatRoom);
+
+        string SendMessageServerUserRemovedFromChatRoom(List<ClientInfo> allConnectedClients, ClientInfo clientInfo, ChatRoom chatRoom, ServerUser serverUserRemoved);
 
         string SendMessageBroadcastMessageToChatRoomActiveUser(List<ClientInfo> allConnectedClients, ClientInfo clientInfo, ChatRoom chatRoom, string messageToChatRoom);
 

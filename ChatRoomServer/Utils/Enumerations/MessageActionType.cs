@@ -20,6 +20,7 @@
         ServerStopped = 15,
         ClientDisconnect = 16,
         ServerClientDisconnectAccepted = 17,
-        ServerUserIsDisconnected = 18
+        ServerUserIsDisconnected = 18,
+        ServerUserRemovedFromChatRoom = 19
     }
 }

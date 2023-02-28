@@ -34,9 +34,10 @@ namespace ChatRoomServer.Services
 
         public string SendMessageServerUserIsDisconnected(List<ClientInfo> allConnectedClients, ClientInfo clientInfo , ServerUser serverUserDisconnected)
         {
-            ServerUser activeServerUser = new ServerUser() { ServerUserID = clientInfo.ServerUserID, Username = clientInfo.Username };
-            Payload payloadUserIsDisconnected = _objectCreator.CreatePayload(allConnectedClients, MessageActionType.ServerUserIsDisconnected, activeServerUser, serverUserDisconnected);
-            string messageSent = SendMessage(clientInfo.TcpClient, payloadUserIsDisconnected);
+            string messageSent = ResolveSendMessageServerUser(MessageActionType.ServerUserIsDisconnected, allConnectedClients, clientInfo, serverUserDisconnected);
+        //    ServerUser activeServerUser = new ServerUser() { ServerUserID = clientInfo.ServerUserID, Username = clientInfo.Username };
+        //    Payload payloadUserIsDisconnected = _objectCreator.CreatePayload(allConnectedClients, MessageActionType.ServerUserIsDisconnected, activeServerUser, serverUserDisconnected);
+        //    string messageSent = SendMessage(clientInfo.TcpClient, payloadUserIsDisconnected);
             return messageSent;
         }
                 
@@ -71,10 +72,19 @@ namespace ChatRoomServer.Services
             return messageSent;
         }
 
-        public string SendMessageServerUserExitedChatRoom(List<ClientInfo> allConnectedClients, ClientInfo clientInfo, ChatRoom chatRoom)
+        public string SendMessageServerUserChatRoomExitAccepted(List<ClientInfo> allConnectedClients, ClientInfo clientInfo, ChatRoom chatRoom)
         {
             string message = ResolveMessageChatRoomStatus(MessageActionType.ServerExitChatRoomAccepted, allConnectedClients, clientInfo, chatRoom);
             return message;
+        }
+
+       
+        public string SendMessageServerUserRemovedFromChatRoom(List<ClientInfo> allConnectedClients, ClientInfo clientInfo, ChatRoom chatRoom, ServerUser serverUserRemoved)
+        {
+            ServerUser activeServerUser = new ServerUser() { ServerUserID = clientInfo.ServerUserID, Username = clientInfo.Username };
+            Payload payloadUserIsDisconnected = _objectCreator.CreatePayload(allConnectedClients, MessageActionType.ServerUserRemovedFromChatRoom, activeServerUser, chatRoom , serverUserRemoved);
+            string messageSent = SendMessage(clientInfo.TcpClient, payloadUserIsDisconnected);
+            return messageSent;
         }
 
         public string SendMessageBroadcastMessageToChatRoomActiveUser(List<ClientInfo> allConnectedClients, ClientInfo clientInfo, ChatRoom chatRoom, string messageToChatRoom)
@@ -104,6 +114,14 @@ namespace ChatRoomServer.Services
 
 
         #region Private Methods
+
+        private string ResolveSendMessageServerUser(MessageActionType messageActionType, List<ClientInfo> allConnectedClients, ClientInfo clientInfo, ServerUser targetServerUser)
+        {
+            ServerUser activeServerUser = new ServerUser() { ServerUserID = clientInfo.ServerUserID, Username = clientInfo.Username };
+            Payload payloadUserIsDisconnected = _objectCreator.CreatePayload(allConnectedClients, messageActionType, activeServerUser, targetServerUser);
+            string messageSent = SendMessage(clientInfo.TcpClient, payloadUserIsDisconnected);
+            return messageSent;
+        }
 
         private string ResolveMessageToClient(MessageActionType messageActionType, List<ClientInfo> allConnectedClients, ClientInfo clientInfo)
         {

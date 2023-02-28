@@ -20,21 +20,24 @@ namespace ChatRoomServer.Services
             return createdPayload;
         }
 
-        public Payload CreatePayload(List<ClientInfo> allConnectedClients, MessageActionType messageActionType, ServerUser activeServerUser, ServerUser serverUserDisconnecte)
+        public Payload CreatePayload(List<ClientInfo> allConnectedClients, MessageActionType messageActionType, ServerUser activeServerUser, ServerUser serverUser)
         {
-            List<ServerUser> allActiveServerUsers = CreateServerUsersFromAllConnectedClients(allConnectedClients);
+            ServerUser serverUserDisconnected = (messageActionType == MessageActionType.ServerUserIsDisconnected) ? serverUser : null;
+            ServerUser serverUserRemovedFromChatRoom = (messageActionType == MessageActionType.ServerUserRemovedFromChatRoom) ? serverUser : null;
+            List <ServerUser> allActiveServerUsers = CreateServerUsersFromAllConnectedClients(allConnectedClients);
             Payload createdPayload = new Payload()
             {
                 MessageActionType = messageActionType,
                 UserId = activeServerUser.ServerUserID,
                 ClientUsername = activeServerUser.Username,
                 ActiveServerUsers = allActiveServerUsers,
-                ServerUserDisconnected = serverUserDisconnecte
+                ServerUserDisconnected = serverUserDisconnected,
+                ServerUserRemovedFromChatRoom = serverUserRemovedFromChatRoom
             };
 
             return createdPayload;
         }
-
+               
 
         public Payload CreatePayload(List<ClientInfo> allConnectedClients, MessageActionType messageActionType, ServerUser serverUser, ChatRoom chatRoom)
         {
@@ -93,6 +96,27 @@ namespace ChatRoomServer.Services
                 ActiveServerUsers = allActiveServerUsers,
                 ChatRoomCreated = chatRoom,
                 InviteToGuestUser = invite
+            };
+
+            return createdPayload;
+        }
+
+
+        public Payload CreatePayload(List<ClientInfo> allConnectedClients, MessageActionType messageActionType, ServerUser targetServerUser, ChatRoom chatRoom, ServerUser serverUser)
+        {
+            ServerUser serverUserDisconnected = (messageActionType == MessageActionType.ServerUserIsDisconnected) ? serverUser : null;
+            ServerUser serverUserRemovedFromChatRoom = (messageActionType == MessageActionType.ServerUserRemovedFromChatRoom) ? serverUser : null;
+
+            List<ServerUser> allActiveServerUsers = CreateServerUsersFromAllConnectedClients(allConnectedClients);
+            Payload createdPayload = new Payload()
+            {
+                MessageActionType = messageActionType,
+                UserId = targetServerUser.ServerUserID,
+                ClientUsername = targetServerUser.Username,
+                ActiveServerUsers = allActiveServerUsers,
+                ChatRoomCreated = chatRoom,
+                ServerUserDisconnected = serverUserDisconnected,
+                ServerUserRemovedFromChatRoom = serverUserRemovedFromChatRoom
             };
 
             return createdPayload;

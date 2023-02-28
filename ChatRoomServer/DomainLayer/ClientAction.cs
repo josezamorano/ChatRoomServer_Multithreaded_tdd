@@ -239,6 +239,7 @@ namespace ChatRoomServer.DomainLayer
                     string messageSent = string.Empty;
                     //in server we remove the user from the list of active users and update display.
                     _chatRoomManager.RemoveUserFromAllActiveUsersInChatRoom(payload.ChatRoomCreated.ChatRoomId, (Guid)payload.UserId);
+                    ServerUser serverUserRemoved = new ServerUser() {ServerUserID = (Guid)payload.UserId,Username = payload.ClientUsername };
                     //If the chatRoom is still active, Notify the remaining users that one user exited the chatRoom 
                     ChatRoom selectedChatRoom = _chatRoomManager.GetAllCreatedChatRooms().Where(a => a.ChatRoomId == payload.ChatRoomCreated.ChatRoomId && a.ChatRoomStatus == ChatRoomStatus.OpenActive).FirstOrDefault();
                     if(selectedChatRoom !=null)
@@ -246,9 +247,9 @@ namespace ChatRoomServer.DomainLayer
                         foreach (var serverUser in selectedChatRoom.AllActiveUsersInChatRoom)
                         {
                             ClientInfo clientInfo = _allConnectedClients.Where(a => a.ServerUserID == serverUser.ServerUserID).FirstOrDefault();
-                            if(clientInfo != null && clientInfo.TcpClient.Connected)
+                            if(clientInfo != null && clientInfo.TcpClient != null && clientInfo.TcpClient.Connected)
                             {
-                                messageSent = _messageDispatcher.SendMessageServerUserExitedChatRoom(_allConnectedClients, clientInfo, selectedChatRoom);
+                                messageSent = _messageDispatcher.SendMessageServerUserRemovedFromChatRoom(_allConnectedClients, clientInfo, payload.ChatRoomCreated, serverUserRemoved);
                                 VerifyIfMessageIsNullOrContainsException(messageSent, tcpClient, serverActivityInfo);
                             }
                         }
@@ -256,7 +257,7 @@ namespace ChatRoomServer.DomainLayer
 
                     //Notify the original client that its exit request is accepted and remove its chat room
                     ClientInfo clientInfoRemoteClient = _allConnectedClients.Where(a=>a.ServerUserID == payload.UserId).FirstOrDefault();
-                    messageSent = _messageDispatcher.SendMessageServerUserExitedChatRoom(_allConnectedClients, clientInfoRemoteClient, payload.ChatRoomCreated);
+                    messageSent = _messageDispatcher.SendMessageServerUserChatRoomExitAccepted(_allConnectedClients, clientInfoRemoteClient, payload.ChatRoomCreated);
                     VerifyIfMessageIsNullOrContainsException(messageSent, tcpClient, serverActivityInfo);
                 }
                 break;
