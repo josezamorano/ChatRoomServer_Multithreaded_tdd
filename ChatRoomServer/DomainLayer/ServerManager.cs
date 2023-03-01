@@ -17,31 +17,22 @@ namespace ChatRoomServer.DomainLayer
 
         IClientAction _clientAction;
         IMessageDispatcher _messageDispatcher;
-        public ServerManager(IClientAction clientAction, IMessageDispatcher messageDispatcher)
+        IDnsProvider _dnsProvider;
+        public ServerManager(IClientAction clientAction, IMessageDispatcher messageDispatcher,IDnsProvider dnsProvider)
         {
             _serverIsActive = false;
             _allConnectedClients = new List<ClientInfo>();      
             _clientAction = clientAction;
             _messageDispatcher = messageDispatcher;
+            _dnsProvider = dnsProvider;
             _clientAction.SetAllConnectedClients(_allConnectedClients);
         }
 
-        private void SeedTESTAllActiveServerUsers()
-        {
 
-            ClientInfo clientInfoTest = new ClientInfo()
-            {
-                TcpClient = null,
-                Username = "abc",
-                ServerUserID = Guid.NewGuid(),
-            };
-             _allConnectedClients.Add(clientInfoTest);
-        }
-
+        //Tested
         public string GetLocalIP()
         {
-            IPHostEntry host;
-            host = Dns.GetHostEntry(Dns.GetHostName());
+            IPHostEntry host = _dnsProvider.GetDnsHostEntry();// Dns.GetHostEntry(Dns.GetHostName());
             foreach (IPAddress ip in host.AddressList)
             {
                 if (ip.AddressFamily == AddressFamily.InterNetwork)
@@ -59,7 +50,6 @@ namespace ChatRoomServer.DomainLayer
             try
             {                                
                 _allConnectedClients.Clear();
-                SeedTESTAllActiveServerUsers();
 
                 _serverStatusLogger = Notification.CRLF + "Starting Server...";
                 serverActivityInfo.ServerLoggerCallback(_serverStatusLogger);

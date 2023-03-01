@@ -33,8 +33,6 @@ namespace ChatRoomServer
         }
 
         #region Event Handlers
-
-
         private void WinFormOnLoad_Event(object sender, EventArgs e)
         {
             txtServerIpAddress.Text = _serverManager.GetLocalIP();
@@ -47,8 +45,6 @@ namespace ChatRoomServer
 
             ChatRoomsUpdateDelegate chatRoomUpdateCallback = new ChatRoomsUpdateDelegate(ChatRoomUpdate_ThreadCallback);
             _chatRoomManager.SetChatRoomUpdateCallback(chatRoomUpdateCallback);
-            //var chatRooms = GetAllChatRoomsTest();
-            //ChatRoomUpdate_ThreadCallback(chatRooms);
 
             CreateChatroomCanvasDynamicControl();
         }
@@ -66,6 +62,9 @@ namespace ChatRoomServer
             e.Graphics.DrawRectangle(Pens.LightGray, e.Bounds);
         }
 
+
+        //Buttons BEGIN****
+
         private void BtnStartServer_ClickEvent(object sender, EventArgs e)
         {
             if (!ResolveValidation()) return;
@@ -79,8 +78,7 @@ namespace ChatRoomServer
             _serverManager.StopServer(serverActivityInfo);
         }
 
-
-
+        //Buttons END******
         #endregion Event Handlers
 
         #region Callbacks

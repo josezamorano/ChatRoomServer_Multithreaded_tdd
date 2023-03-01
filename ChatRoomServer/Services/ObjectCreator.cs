@@ -6,6 +6,8 @@ namespace ChatRoomServer.Services
 {
     public class ObjectCreator : IObjectCreator
     {
+
+        //Tested
         public Payload CreatePayload(List<ClientInfo> allConnectedClients, MessageActionType messageActionType, Guid? userId, string username)
         {
             List<ServerUser> allActiveServerUsers = CreateServerUsersFromAllConnectedClients(allConnectedClients);

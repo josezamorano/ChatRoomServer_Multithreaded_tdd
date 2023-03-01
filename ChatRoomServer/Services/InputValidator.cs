@@ -4,7 +4,7 @@ namespace ChatRoomServer.Services
 {
     public class InputValidator :IInputValidator
     {
-
+        //Tested
         public string ValidateServerInputs(string port)
         {
             var portReport = ResolvePortNumberForClients(port);

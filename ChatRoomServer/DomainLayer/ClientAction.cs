@@ -19,12 +19,12 @@ namespace ChatRoomServer.DomainLayer
         IChatRoomManager _chatRoomManager;
         public ClientAction(ISerializationProvider serializationProvider,
                             ITransmitter transmitter, 
-                            IMessageDispatcher messageDisptcher, 
+                            IMessageDispatcher messageDispatcher, 
                             IChatRoomManager chatRoomManager)
         {
             _serializationProvider = serializationProvider;
             _transmitter = transmitter;
-            _messageDispatcher = messageDisptcher;
+            _messageDispatcher = messageDispatcher;
             _chatRoomManager = chatRoomManager;
         }
 
@@ -66,6 +66,7 @@ namespace ChatRoomServer.DomainLayer
             
         }
 
+        //Tested
         public void ResolveCommunicationFromClient(TcpClient tcpClient, ServerActivityInfo serverActivityInfo)
         {              
             void ProcessMessageFromClientCallback(string receivedMessage)
@@ -77,6 +78,7 @@ namespace ChatRoomServer.DomainLayer
                 {                    
                     ResolveActionRequestedByClient(receivedMessage, tcpClient, serverActivityInfo);
                 }
+                serverActivityInfo.ServerLoggerCallback(receivedMessage);
             }
 
             MessageFromClientDelegate messageFromClientCallback = new MessageFromClientDelegate(ProcessMessageFromClientCallback);
@@ -289,7 +291,7 @@ namespace ChatRoomServer.DomainLayer
             { 
                 return false; 
             }
-            //send message to REMOVE Original server user who sent the INVITE rejection
+            //send message client to REMOVE Original server user who sent the INVITE rejection
             if (targetClient.ServerUserID == inviteReceivedFromGuest.GuestServerUser.ServerUserID)
             {
                 var messageSent = _messageDispatcher.SendMessageServerUserChatRoomUpdatedAndInviteRejected(_allConnectedClients, targetClient, inviteReceivedFromGuest);

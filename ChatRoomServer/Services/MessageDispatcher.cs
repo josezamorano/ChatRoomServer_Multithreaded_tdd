@@ -20,6 +20,7 @@ namespace ChatRoomServer.Services
             _transmitter = transmitter;
         }
 
+        //Tested
         public string SendMessageServerStopping(List<ClientInfo> allConnectedClients, ClientInfo clientInfo)
         {          
             string messageSent = ResolveMessageToClient(MessageActionType.ServerStopped, allConnectedClients, clientInfo);
@@ -35,9 +36,6 @@ namespace ChatRoomServer.Services
         public string SendMessageServerUserIsDisconnected(List<ClientInfo> allConnectedClients, ClientInfo clientInfo , ServerUser serverUserDisconnected)
         {
             string messageSent = ResolveSendMessageServerUser(MessageActionType.ServerUserIsDisconnected, allConnectedClients, clientInfo, serverUserDisconnected);
-        //    ServerUser activeServerUser = new ServerUser() { ServerUserID = clientInfo.ServerUserID, Username = clientInfo.Username };
-        //    Payload payloadUserIsDisconnected = _objectCreator.CreatePayload(allConnectedClients, MessageActionType.ServerUserIsDisconnected, activeServerUser, serverUserDisconnected);
-        //    string messageSent = SendMessage(clientInfo.TcpClient, payloadUserIsDisconnected);
             return messageSent;
         }
                 

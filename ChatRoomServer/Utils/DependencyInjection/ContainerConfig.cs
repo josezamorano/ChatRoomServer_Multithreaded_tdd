@@ -13,6 +13,7 @@ namespace ChatRoomServer.Utils.DependencyInjection
             ContainerBuilder builder = new ContainerBuilder();
             builder.RegisterType<ChatRoomManager>().As<IChatRoomManager>().SingleInstance();
             builder.RegisterType<ClientAction>().As<IClientAction>();
+            builder.RegisterType<DnsProvider>().As<IDnsProvider>();
             builder.RegisterType<InputValidator>().As<IInputValidator>();
             builder.RegisterType<MessageDispatcher>().As<IMessageDispatcher>();
             builder.RegisterType<ObjectCreator>().As<IObjectCreator>();

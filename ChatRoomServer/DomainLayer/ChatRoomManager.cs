@@ -22,6 +22,7 @@ namespace ChatRoomServer.DomainLayer
             _chatRoomUpdateCallback = chatRoomUpdateCallback;
         }
 
+        //Test
         public ChatRoom CreateChatRoom(ChatRoom chatRoomFromServerUser)
         {
             ChatRoom chatRoomCreated = _objectCreator.CreateChatRoom(chatRoomFromServerUser.ChatRoomName, chatRoomFromServerUser.Creator, chatRoomFromServerUser.AllActiveUsersInChatRoom, chatRoomFromServerUser.AllInvitesSentToGuestUsers);
